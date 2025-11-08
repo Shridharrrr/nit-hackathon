@@ -20,6 +20,7 @@ export default function Community() {
   const [expandedPost, setExpandedPost] = useState(null); // Track which post's comments are expanded
   const [postComments, setPostComments] = useState({}); // Store comments for each post
   const [newComments, setNewComments] = useState({}); // Store new comment text for each post
+  const [showCrossCheckModal, setShowCrossCheckModal] = useState(null); // Track which post's cross-check to show
 
   const handleLogout = async () => {
     try {
@@ -587,6 +588,23 @@ export default function Community() {
                     <p className="text-gray-200 leading-relaxed">{post.verdict}</p>
                   </div>
 
+                  {/* Cross-Check Sources Button */}
+                  {post.cross_check && (post.cross_check.support_sources?.length > 0 || post.cross_check.contradict_sources?.length > 0) && (
+                    <div className="mb-5">
+                      <button
+                        onClick={() => setShowCrossCheckModal(post)}
+                        className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-black/40 border border-gray-800 rounded-lg hover:bg-black/60 transition-all"
+                      >
+                        <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-sm font-semibold text-white">
+                          View Cross-Check Sources ({(post.cross_check.support_sources?.length || 0) + (post.cross_check.contradict_sources?.length || 0)})
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
                   {/* Stats */}
                   <div className="flex items-center justify-between mb-5 pb-5 border-b border-gray-800">
                     <div className="flex items-center space-x-6">
@@ -903,6 +921,110 @@ export default function Community() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Cross-Check Sources Modal */}
+        {showCrossCheckModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-[#0a0a0f] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-gray-800">
+              {/* Modal Header */}
+              <div className="bg-purple-600 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="text-xl font-bold text-white">Cross-Check Sources</h3>
+                  <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold text-white">
+                    {(showCrossCheckModal.cross_check.support_sources?.length || 0) + (showCrossCheckModal.cross_check.contradict_sources?.length || 0)} sources
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowCrossCheckModal(null)}
+                  className="text-white hover:bg-white/20 rounded-full p-2 transition-all"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* Supporting Sources */}
+                {showCrossCheckModal.cross_check.support_sources && showCrossCheckModal.cross_check.support_sources.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-bold text-green-400 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Supporting Sources ({showCrossCheckModal.cross_check.support_sources.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {showCrossCheckModal.cross_check.support_sources.map((source, index) => (
+                        <div key={index} className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 hover:bg-green-500/20 transition-colors">
+                          <h5 className="font-semibold text-white mb-2">{source.title}</h5>
+                          <p className="text-sm text-gray-300 mb-3 leading-relaxed">{source.snippet}</p>
+                          <a 
+                            href={source.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-green-400 hover:text-green-300 flex items-center text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            View Source
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contradicting Sources */}
+                {showCrossCheckModal.cross_check.contradict_sources && showCrossCheckModal.cross_check.contradict_sources.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-bold text-red-400 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      Contradicting Sources ({showCrossCheckModal.cross_check.contradict_sources.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {showCrossCheckModal.cross_check.contradict_sources.map((source, index) => (
+                        <div key={index} className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 hover:bg-red-500/20 transition-colors">
+                          <h5 className="font-semibold text-white mb-2">{source.title}</h5>
+                          <p className="text-sm text-gray-300 mb-3 leading-relaxed">{source.snippet}</p>
+                          <a 
+                            href={source.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-red-400 hover:text-red-300 flex items-center text-sm font-medium"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            View Source
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No sources found */}
+                {(!showCrossCheckModal.cross_check.support_sources || showCrossCheckModal.cross_check.support_sources.length === 0) &&
+                 (!showCrossCheckModal.cross_check.contradict_sources || showCrossCheckModal.cross_check.contradict_sources.length === 0) && (
+                  <div className="text-center py-8">
+                    <svg className="mx-auto h-12 w-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="mt-2 text-gray-400">No cross-check sources available</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

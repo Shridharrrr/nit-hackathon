@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
@@ -49,6 +49,7 @@ class CommunityPostResponse(BaseModel):
     credibility: Optional[str] = None
     sentiment: Optional[str] = None
     confidence: Optional[float] = None
+    cross_check: Optional[Dict[str, Any]] = None
     upvotes: int = 0
     downvotes: int = 0
     comment_count: int = 0

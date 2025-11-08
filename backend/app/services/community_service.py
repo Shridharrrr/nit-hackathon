@@ -52,6 +52,7 @@ class CommunityService:
                 'credibility': analysis_data.get('credibility'),
                 'sentiment': analysis_data.get('sentiment'),
                 'confidence': analysis_data.get('confidence'),
+                'cross_check': analysis_data.get('cross_check', {}),
                 'upvotes': 0,
                 'downvotes': 0,
                 'comment_count': 0,
