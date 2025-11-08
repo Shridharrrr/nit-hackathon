@@ -4,3 +4,11 @@ uvicorn
 firebase-admin
 python-jose[cryptography]
 python-multipart
+beautifulsoup4
+requests
+google-generativeai
+huggingface-hub
+lxml
+python-dotenv
+transformers
+torch

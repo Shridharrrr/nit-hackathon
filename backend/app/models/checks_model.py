@@ -1,18 +1,25 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
+from datetime import datetime
 
-class CheckRequest(BaseModel):
+
+class NewsAnalysisRequest(BaseModel):
     url: str
-    user_id: str
 
 
-class CheckResponse(BaseModel):
-    summary: str
-    sentiment: str
+class NewsAnalysisResponse(BaseModel):
+    success: bool
+    id: Optional[str] = None
+    url: Optional[str] = None
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    verdict: Optional[str] = None
+    credibility: Optional[str] = None
+    sentiment: Optional[str] = None
+    confidence: Optional[float] = None
+    timestamp: Optional[str] = None
+    error: Optional[str] = None
 
-    verified_sources: List[str]
-    rejected_sources: List[str]
 
-    domain_cred: float
-    final_score: float
-    timestamp: str
+class NewsAnalysisHistory(BaseModel):
+    analyses: list

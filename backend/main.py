@@ -26,6 +26,10 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 
+# Import and include news router
+from app.routes import news
+app.include_router(news.router, prefix="/api/news", tags=["news"])
+
 @app.get("/")
 async def root():
     return {"message": "Fake News Detector API is running"}
