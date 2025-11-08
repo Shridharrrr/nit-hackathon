@@ -1,6 +1,17 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
+
+
+class CrossCheckSource(BaseModel):
+    title: str
+    url: str
+    snippet: str
+
+
+class CrossCheckData(BaseModel):
+    support_sources: List[CrossCheckSource] = []
+    contradict_sources: List[CrossCheckSource] = []
 
 
 class NewsAnalysisRequest(BaseModel):
@@ -17,6 +28,7 @@ class NewsAnalysisResponse(BaseModel):
     credibility: Optional[str] = None
     sentiment: Optional[str] = None
     confidence: Optional[float] = None
+    cross_check: Optional[Dict] = None
     timestamp: Optional[str] = None
     error: Optional[str] = None
 

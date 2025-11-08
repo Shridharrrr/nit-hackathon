@@ -46,7 +46,8 @@ async def analyze_news(
                     'verdict': result['verdict'],
                     'credibility': result['credibility'],
                     'sentiment': result['sentiment'],
-                    'confidence': result['confidence']
+                    'confidence': result['confidence'],
+                    'cross_check': result.get('cross_check', {})
                 }
             )
             
@@ -60,6 +61,7 @@ async def analyze_news(
                 credibility=result['credibility'],
                 sentiment=result['sentiment'],
                 confidence=result['confidence'],
+                cross_check=result.get('cross_check'),
                 timestamp=None  # Will be set by Firestore
             )
             
@@ -74,6 +76,7 @@ async def analyze_news(
                 credibility=result['credibility'],
                 sentiment=result['sentiment'],
                 confidence=result['confidence'],
+                cross_check=result.get('cross_check'),
                 error=f"Analysis completed but failed to save: {str(e)}"
             )
             
