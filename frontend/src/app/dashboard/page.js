@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import { useRouter } from 'next/navigation';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const [newsUrl, setNewsUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -13,6 +15,7 @@ export default function Dashboard() {
   const [history, setHistory] = useState([]);
   const [showResult, setShowResult] = useState(false);
   const [isViewingHistory, setIsViewingHistory] = useState(false);
+  const [shareLoading, setShareLoading] = useState(false);
   const resultRef = useRef(null);
 
   const handleLogout = async () => {
@@ -100,6 +103,43 @@ export default function Dashboard() {
     setIsViewingHistory(false);
   };
 
+  const handleShareToCommunity = async () => {
+    if (!result || !result.id) {
+      alert('No analysis to share');
+      return;
+    }
+
+    try {
+      setShareLoading(true);
+      const token = await user.getIdToken();
+      const response = await fetch('http://localhost:8000/api/community/share', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ analysis_id: result.id })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        alert('Successfully shared to community!');
+        // Redirect to community page after a short delay
+        setTimeout(() => {
+          router.push('/community');
+        }, 1000);
+      } else {
+        const data = await response.json();
+        alert(data.detail || 'Failed to share to community');
+      }
+    } catch (error) {
+      console.error('Failed to share:', error);
+      alert('An error occurred while sharing');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   const getCredibilityColor = (credibility) => {
     switch (credibility) {
       case 'Likely Credible':
@@ -117,10 +157,24 @@ export default function Dashboard() {
         <header className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
+              <div className="flex items-center space-x-8">
                 <h1 className="text-2xl font-bold text-gray-900">
                   Fake News Detector
                 </h1>
+                <nav className="flex space-x-4">
+                  <button
+                    onClick={() => router.push('/dashboard')}
+                    className="px-4 py-2 text-blue-600 border-b-2 border-blue-600 font-medium"
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    onClick={() => router.push('/community')}
+                    className="px-4 py-2 text-gray-600 hover:text-blue-600 font-medium transition-colors"
+                  >
+                    Community
+                  </button>
+                </nav>
               </div>
               
               <div className="flex items-center space-x-4">
@@ -396,6 +450,22 @@ export default function Dashboard() {
                           <p className="text-2xl font-bold text-gray-900">{result.confidence}%</p>
                         </div>
                       </div>
+
+                      {/* Share to Community Button */}
+                      {!isViewingHistory && result.id && (
+                        <div className="animate-slide-up pt-4 border-t border-gray-200" style={{ animationDelay: '600ms' }}>
+                          <button
+                            onClick={handleShareToCommunity}
+                            disabled={shareLoading}
+                            className="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.02] shadow-lg font-semibold"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                            </svg>
+                            <span>{shareLoading ? 'Sharing...' : 'Share to Community'}</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

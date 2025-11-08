@@ -70,3 +70,26 @@ async def get_current_active_user(current_user: dict = Depends(get_current_user)
             detail="Email not verified"
         )
     return current_user
+
+async def get_optional_current_user(credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer(auto_error=False))):
+    """
+    Get current user if authenticated, otherwise return None
+    """
+    if credentials is None:
+        return None
+    
+    try:
+        token = credentials.credentials
+        decoded_token = auth.verify_id_token(token)
+        
+        user_info = {
+            "uid": decoded_token.get("uid"),
+            "email": decoded_token.get("email"),
+            "name": decoded_token.get("name"),
+            "picture": decoded_token.get("picture"),
+            "email_verified": decoded_token.get("email_verified", False)
+        }
+        
+        return user_info
+    except:
+        return None

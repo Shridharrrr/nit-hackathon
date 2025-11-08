@@ -2,12 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.models.checks_model import NewsAnalysisRequest, NewsAnalysisResponse, NewsAnalysisHistory
 from app.services.news_analyzer import NewsAnalyzer
 from app.services.firestore_service import FirestoreService
+from app.services.community_service import CommunityService
 from app.dependencies.auth import get_current_user
 from typing import Dict
 
 router = APIRouter()
 news_analyzer = NewsAnalyzer()
 firestore_service = FirestoreService()
+community_service = CommunityService()
 
 
 @router.post("/analyze", response_model=NewsAnalysisResponse)

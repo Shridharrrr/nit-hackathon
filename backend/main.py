@@ -30,6 +30,10 @@ app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 from app.routes import news
 app.include_router(news.router, prefix="/api/news", tags=["news"])
 
+# Import and include community router
+from app.routes import community
+app.include_router(community.router, prefix="/api/community", tags=["community"])
+
 @app.get("/")
 async def root():
     return {"message": "Fake News Detector API is running"}
