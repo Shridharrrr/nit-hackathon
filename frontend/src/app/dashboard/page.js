@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [showResult, setShowResult] = useState(false);
   const [isViewingHistory, setIsViewingHistory] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
+  const [showCrossCheckModal, setShowCrossCheckModal] = useState(false);
   const resultRef = useRef(null);
 
   const handleLogout = async () => {
@@ -245,7 +246,8 @@ export default function Dashboard() {
                         verdict: item.verdict,
                         summary: item.summary,
                         sentiment: item.sentiment,
-                        confidence: item.confidence
+                        confidence: item.confidence,
+                        cross_check: item.cross_check
                       });
                       setShowResult(true);
                       setIsViewingHistory(true);
@@ -451,6 +453,21 @@ export default function Dashboard() {
                         </div>
                       </div>
 
+                      {/* Cross-Check Button */}
+                      {result.cross_check && (result.cross_check.support_sources?.length > 0 || result.cross_check.contradict_sources?.length > 0) && (
+                        <div className="animate-slide-up" style={{ animationDelay: '550ms' }}>
+                          <button
+                            onClick={() => setShowCrossCheckModal(true)}
+                            className="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-[1.02] shadow-lg font-semibold"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>View Cross-Check Sources ({(result.cross_check.support_sources?.length || 0) + (result.cross_check.contradict_sources?.length || 0)})</span>
+                          </button>
+                        </div>
+                      )}
+
                       {/* Share to Community Button */}
                       {!isViewingHistory && result.id && (
                         <div className="animate-slide-up pt-4 border-t border-gray-200" style={{ animationDelay: '600ms' }}>
@@ -473,6 +490,106 @@ export default function Dashboard() {
             </div>
           </main>
         </div>
+
+        {/* Cross-Check Modal */}
+        {showCrossCheckModal && result?.cross_check && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setShowCrossCheckModal(false)}>
+            <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                <h3 className="text-2xl font-bold text-white flex items-center">
+                  <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Cross-Check Sources
+                </h3>
+                <button
+                  onClick={() => setShowCrossCheckModal(false)}
+                  className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Supporting Sources */}
+                {result.cross_check.support_sources && result.cross_check.support_sources.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-bold text-green-600 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Supporting Sources ({result.cross_check.support_sources.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {result.cross_check.support_sources.map((source, index) => (
+                        <div key={index} className="bg-green-50 border border-green-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                          <h5 className="font-semibold text-gray-900 mb-2">{source.title}</h5>
+                          <p className="text-sm text-gray-700 mb-3">{source.snippet}</p>
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-sm text-green-600 hover:text-green-700 font-medium"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            Read Full Article
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contradicting Sources */}
+                {result.cross_check.contradict_sources && result.cross_check.contradict_sources.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-bold text-red-600 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                      Contradicting Sources ({result.cross_check.contradict_sources.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {result.cross_check.contradict_sources.map((source, index) => (
+                        <div key={index} className="bg-red-50 border border-red-200 rounded-xl p-4 hover:shadow-md transition-shadow">
+                          <h5 className="font-semibold text-gray-900 mb-2">{source.title}</h5>
+                          <p className="text-sm text-gray-700 mb-3">{source.snippet}</p>
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-sm text-red-600 hover:text-red-700 font-medium"
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            Read Full Article
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No sources found */}
+                {(!result.cross_check.support_sources || result.cross_check.support_sources.length === 0) &&
+                 (!result.cross_check.contradict_sources || result.cross_check.contradict_sources.length === 0) && (
+                  <div className="text-center py-8">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="mt-2 text-gray-600">No cross-check sources available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ProtectedRoute>
   );
