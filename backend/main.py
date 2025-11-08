@@ -4,11 +4,7 @@ from app.routes import auth
 import firebase_admin
 from firebase_admin import credentials
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL")
 
 # Initialize Firebase Admin SDK
 cred = credentials.Certificate("serviceAccountKey.json")

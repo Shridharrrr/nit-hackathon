@@ -6,6 +6,7 @@ python-jose[cryptography]
 python-multipart
 beautifulsoup4
 requests
+httpx
 google-generativeai
 huggingface-hub
 lxml

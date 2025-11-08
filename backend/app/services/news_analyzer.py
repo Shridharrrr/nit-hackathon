@@ -295,10 +295,11 @@ Summary:"""
             cross_check_data = None
             try:
                 from app.services.n8n_service import get_cross_check
-                cross_check_data = get_cross_check(scraped_data['title'])
-                print(f"Cross-check data received: {cross_check_data}")
+                print(f"🔍 Requesting cross-check for title: {scraped_data['title']}")
+                cross_check_data = await get_cross_check(scraped_data['title'])
+                print(f"✅ Cross-check data received: {cross_check_data}")
             except Exception as e:
-                print(f"Failed to get cross-check data: {e}")
+                print(f"❌ Failed to get cross-check data: {type(e).__name__}: {e}")
                 cross_check_data = {
                     "support_sources": [],
                     "contradict_sources": [],
