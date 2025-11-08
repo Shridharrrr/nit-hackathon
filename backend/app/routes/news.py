@@ -3,6 +3,7 @@ from app.models.checks_model import NewsAnalysisRequest, NewsAnalysisResponse, N
 from app.services.news_analyzer import NewsAnalyzer
 from app.services.firestore_service import FirestoreService
 from app.services.community_service import CommunityService
+from app.services.domain_service import DomainService
 from app.dependencies.auth import get_current_user
 from typing import Dict
 
@@ -10,6 +11,7 @@ router = APIRouter()
 news_analyzer = NewsAnalyzer()
 firestore_service = FirestoreService()
 community_service = CommunityService()
+domain_service = DomainService()
 
 
 @router.post("/analyze", response_model=NewsAnalysisResponse)
@@ -34,6 +36,25 @@ async def analyze_news(
                 detail=result.get('error', 'Failed to analyze news')
             )
         
+        # Get or create domain credibility score
+        domain_cred = domain_service.get_or_create_domain_score(request.url)
+        print(f"🔍 Initial domain score: {domain_cred.get('total_score', 50.0)}")
+        
+        # Update domain score based on cross-check results
+        cross_check = result.get('cross_check', {})
+        if cross_check:
+            supporting_sources = cross_check.get('support_sources', [])
+            contradicting_sources = cross_check.get('contradict_sources', [])
+            print(f"📊 Cross-check: {len(supporting_sources)} supporting, {len(contradicting_sources)} contradicting")
+            
+            if supporting_sources or contradicting_sources:
+                domain_cred = domain_service.update_domain_from_analysis(
+                    request.url,
+                    supporting_sources,
+                    contradicting_sources
+                )
+                print(f"✅ Updated domain score: {domain_cred.get('total_score', 50.0)}")
+        
         # Save to Firestore
         try:
             doc_id = firestore_service.save_analysis(
@@ -47,7 +68,8 @@ async def analyze_news(
                     'credibility': result['credibility'],
                     'sentiment': result['sentiment'],
                     'confidence': result['confidence'],
-                    'cross_check': result.get('cross_check', {})
+                    'cross_check': result.get('cross_check', {}),
+                    'domain_credibility': domain_cred.get('total_score', 50.0)
                 }
             )
             
@@ -62,6 +84,7 @@ async def analyze_news(
                 sentiment=result['sentiment'],
                 confidence=result['confidence'],
                 cross_check=result.get('cross_check'),
+                domain_credibility=domain_cred.get('total_score', 50.0),
                 timestamp=None  # Will be set by Firestore
             )
             
@@ -77,6 +100,7 @@ async def analyze_news(
                 sentiment=result['sentiment'],
                 confidence=result['confidence'],
                 cross_check=result.get('cross_check'),
+                domain_credibility=domain_cred.get('total_score', 50.0),
                 error=f"Analysis completed but failed to save: {str(e)}"
             )
             

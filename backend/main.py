@@ -35,6 +35,10 @@ app.include_router(news.router, prefix="/api/news", tags=["news"])
 from app.routes import community
 app.include_router(community.router, prefix="/api/community", tags=["community"])
 
+# Import and include domain router
+from app.routes import domain
+app.include_router(domain.router, prefix="/api/domain", tags=["domain"])
+
 @app.get("/")
 async def root():
     return {"message": "Fake News Detector API is running"}

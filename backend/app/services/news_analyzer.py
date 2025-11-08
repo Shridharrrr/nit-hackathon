@@ -206,11 +206,14 @@ Summary:"""
                     verdict = "Uncertain classification. Always verify important claims with established news sources."
                     credibility = "Neutral"
             
+            # Normalize confidence to 0-100 range
+            normalized_confidence = min(100.0, max(0.0, round(confidence * 100, 2)))
+            
             return {
                 "verdict": verdict,
                 "credibility": credibility,
                 "sentiment": sentiment,
-                "confidence": round(confidence * 100, 2)
+                "confidence": normalized_confidence
             }
             
         except Exception as e:
@@ -266,11 +269,14 @@ Summary:"""
             verdict = "Article appears balanced. Always verify important claims with established news sources."
             credibility = "Neutral"
         
+        # Normalize confidence to 0-100 range
+        normalized_confidence = min(100.0, max(0.0, round(confidence, 2)))
+        
         return {
             "verdict": verdict,
             "credibility": credibility,
             "sentiment": sentiment,
-            "confidence": round(confidence, 2)
+            "confidence": normalized_confidence
         }
     
     async def analyze_news(self, url: str) -> Dict:

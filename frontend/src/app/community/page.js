@@ -21,6 +21,7 @@ export default function Community() {
   const [postComments, setPostComments] = useState({}); // Store comments for each post
   const [newComments, setNewComments] = useState({}); // Store new comment text for each post
   const [showCrossCheckModal, setShowCrossCheckModal] = useState(null); // Track which post's cross-check to show
+  const [autoRefresh, setAutoRefresh] = useState(true); // Toggle auto-refresh
 
   const handleLogout = async () => {
     try {
@@ -30,11 +31,21 @@ export default function Community() {
     }
   };
 
+  // Initial fetch and auto-refresh setup
   useEffect(() => {
     if (user) {
       fetchPosts();
+      
+      // Set up auto-refresh every 10 seconds
+      if (autoRefresh) {
+        const interval = setInterval(() => {
+          fetchPostsQuietly();
+        }, 10000); // 10 seconds
+        
+        return () => clearInterval(interval);
+      }
     }
-  }, [user]);
+  }, [user, autoRefresh]);
 
   const fetchPosts = async () => {
     try {
@@ -60,6 +71,26 @@ export default function Community() {
       console.error('Failed to fetch posts:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch posts without showing loading spinner (for auto-refresh)
+  const fetchPostsQuietly = async () => {
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('http://127.0.0.1:8000/api/community/posts?limit=50', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPosts(data.posts || []);
+        console.log('🔄 Posts refreshed:', new Date().toLocaleTimeString());
+      }
+    } catch (error) {
+      console.error('Failed to refresh posts:', error);
     }
   };
 
@@ -128,10 +159,19 @@ export default function Community() {
       
       if (response.ok) {
         const data = await response.json();
-        // Sync with server response
+        console.log('🔄 Vote response:', data);
+        // Sync with server response including updated domain score
         setPosts(posts.map(p => 
           p.id === postId 
-            ? { ...p, upvotes: data.upvotes, downvotes: data.downvotes, user_vote: data.user_vote }
+            ? { 
+                ...p, 
+                upvotes: data.upvotes, 
+                downvotes: data.downvotes, 
+                user_vote: data.user_vote,
+                domain_credibility: data.domain_credibility !== null && data.domain_credibility !== undefined 
+                  ? data.domain_credibility 
+                  : p.domain_credibility
+              }
             : p
         ));
       } else {
@@ -469,38 +509,56 @@ export default function Community() {
                 </p>
               </div>
               
-              {/* Filter Buttons */}
-              <div className="flex items-center space-x-2 bg-white/5 rounded-lg p-1 border border-gray-800">
-                <button
-                  onClick={() => setFilter('all')}
-                  className={`px-4 py-2 rounded text-sm font-medium transition-all ${
-                    filter === 'all'
-                      ? 'bg-purple-600 text-white'
-                      : 'text-gray-400 hover:bg-white/10'
-                  }`}
-                >
-                  All Posts
-                </button>
-                <button
-                  onClick={() => setFilter('credible')}
-                  className={`px-4 py-2 rounded text-sm font-medium transition-all ${
-                    filter === 'credible'
-                      ? 'bg-green-600 text-white'
-                      : 'text-gray-400 hover:bg-white/10'
-                  }`}
-                >
-                  Credible
-                </button>
-                <button
-                  onClick={() => setFilter('needs-verification')}
-                  className={`px-4 py-2 rounded text-sm font-medium transition-all ${
-                    filter === 'needs-verification'
-                      ? 'bg-red-600 text-white'
-                      : 'text-gray-400 hover:bg-white/10'
+              {/* Filter Buttons and Auto-Refresh Toggle */}
+              <div className="flex items-center space-x-4">
+                {/* Auto-Refresh Toggle */}
+                <div className="flex items-center space-x-2 bg-white/5 rounded-lg px-3 py-2 border border-gray-800">
+                  <button
+                    onClick={() => setAutoRefresh(!autoRefresh)}
+                    className={`flex items-center space-x-2 text-sm font-medium transition-all ${
+                      autoRefresh ? 'text-green-400' : 'text-gray-400'
+                    }`}
+                  >
+                    <svg className={`w-4 h-4 ${autoRefresh ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <span>{autoRefresh ? 'Auto-Refresh ON' : 'Auto-Refresh OFF'}</span>
+                  </button>
+                </div>
+
+                {/* Filter Buttons */}
+                <div className="flex items-center space-x-2 bg-white/5 rounded-lg p-1 border border-gray-800">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={`px-4 py-2 rounded text-sm font-medium transition-all ${
+                      filter === 'all'
+                        ? 'bg-purple-600 text-white'
+                        : 'text-gray-400 hover:bg-white/10'
+                    }`}
+                  >
+                    All Posts
+                  </button>
+                  <button
+                    onClick={() => setFilter('credible')}
+                    className={`px-4 py-2 rounded text-sm font-medium transition-all ${
+                      filter === 'credible'
+                        ? 'bg-green-600 text-white'
+                        : 'text-gray-400 hover:bg-white/10'
+                    }`}
+                  >
+                    Credible
+                  </button>
+                  <button
+                    onClick={() => setFilter('needs-verification')}
+                    className={`px-4 py-2 rounded text-sm font-medium transition-all ${
+                      filter === 'needs-verification'
+                        ? 'bg-red-600 text-white'
+                        : 'text-gray-400 hover:bg-white/10'
                   }`}
                 >
                   Needs Check
                 </button>
+              </div>
               </div>
             </div>
           </div>
@@ -605,22 +663,71 @@ export default function Community() {
                     </div>
                   )}
 
-                  {/* Stats */}
-                  <div className="flex items-center justify-between mb-5 pb-5 border-b border-gray-800">
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-2">
+                  {/* Stats Grid */}
+                  <div className={`grid ${post.domain_credibility != null && post.domain_credibility !== undefined ? 'grid-cols-3' : 'grid-cols-2'} gap-4 mb-5`}>
+                    <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/30">
+                      <div className="flex items-center space-x-2 mb-1">
                         <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                        <span className="text-sm text-gray-400">
-                          Sentiment: <span className="text-purple-400 font-semibold">{post.sentiment}</span>
-                        </span>
+                        <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Sentiment</p>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <span className="text-sm text-gray-400">
-                          Confidence: <span className="text-green-400 font-semibold">{post.confidence}%</span>
-                        </span>
-                      </div>
+                      <p className="text-lg font-bold text-white">{post.sentiment}</p>
                     </div>
+                    {(() => {
+                      const supportCount = post.cross_check?.support_sources?.length || 0;
+                      const contradictCount = post.cross_check?.contradict_sources?.length || 0;
+                      const totalSources = supportCount + contradictCount;
+                      
+                      if (totalSources === 0) {
+                        return (
+                          <div className="bg-gray-500/10 p-4 rounded-lg border border-gray-500/30">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Verification</p>
+                            </div>
+                            <p className="text-lg font-bold text-white">N/A</p>
+                            <p className="text-xs text-gray-400 mt-1">No sources</p>
+                          </div>
+                        );
+                      }
+                      
+                      const supportPercent = ((supportCount / totalSources) * 100).toFixed(1);
+                      const contradictPercent = ((contradictCount / totalSources) * 100).toFixed(1);
+                      
+                      if (supportCount >= contradictCount) {
+                        return (
+                          <div className="bg-green-500/10 p-4 rounded-lg border border-green-500/30">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                              <p className="text-xs font-semibold text-green-400 uppercase tracking-wide">Support</p>
+                            </div>
+                            <p className="text-lg font-bold text-white">{supportPercent}%</p>
+                            <p className="text-xs text-gray-400 mt-1">{supportCount} of {totalSources} sources</p>
+                          </div>
+                        );
+                      } else {
+                        return (
+                          <div className="bg-red-500/10 p-4 rounded-lg border border-red-500/30">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                              <p className="text-xs font-semibold text-red-400 uppercase tracking-wide">Contradiction</p>
+                            </div>
+                            <p className="text-lg font-bold text-white">{contradictPercent}%</p>
+                            <p className="text-xs text-gray-400 mt-1">{contradictCount} of {totalSources} sources</p>
+                          </div>
+                        );
+                      }
+                    })()}
+                    {post.domain_credibility != null && post.domain_credibility !== undefined && (
+                      <div className={`p-4 rounded-lg border ${post.domain_credibility >= 70 ? 'bg-blue-500/10 border-blue-500/30' : post.domain_credibility >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          <p className={`text-xs font-semibold uppercase tracking-wide ${post.domain_credibility >= 70 ? 'text-blue-400' : post.domain_credibility >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>Domain Score</p>
+                        </div>
+                        <p className="text-lg font-bold text-white">{typeof post.domain_credibility === 'number' ? post.domain_credibility.toFixed(1) : post.domain_credibility}/100</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}

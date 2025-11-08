@@ -29,6 +29,7 @@ class NewsAnalysisResponse(BaseModel):
     sentiment: Optional[str] = None
     confidence: Optional[float] = None
     cross_check: Optional[Dict] = None
+    domain_credibility: Optional[float] = None
     timestamp: Optional[str] = None
     error: Optional[str] = None
 

@@ -76,6 +76,8 @@ export default function Dashboard() {
       });
 
       const data = await response.json();
+      console.log('📊 Analysis response:', data);
+      console.log('🔍 Domain credibility:', data.domain_credibility);
 
       if (response.ok && data.success) {
         setResult(data);
@@ -434,15 +436,53 @@ export default function Dashboard() {
                       )}
 
                       {/* Stats Grid */}
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className={`grid ${result.domain_credibility != null && result.domain_credibility !== undefined ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
                         <div className="bg-purple-500/10 p-6 rounded-lg border border-purple-500/30">
                           <p className="text-sm font-semibold text-purple-400 uppercase tracking-wide mb-2">Classification</p>
                           <p className="text-2xl font-bold text-white">{result.sentiment}</p>
                         </div>
-                        <div className="bg-green-500/10 p-6 rounded-lg border border-green-500/30">
-                          <p className="text-sm font-semibold text-green-400 uppercase tracking-wide mb-2">Confidence</p>
-                          <p className="text-2xl font-bold text-white">{result.confidence}%</p>
-                        </div>
+                        {(() => {
+                          const supportCount = result.cross_check?.support_sources?.length || 0;
+                          const contradictCount = result.cross_check?.contradict_sources?.length || 0;
+                          const totalSources = supportCount + contradictCount;
+                          
+                          if (totalSources === 0) {
+                            return (
+                              <div className="bg-gray-500/10 p-6 rounded-lg border border-gray-500/30">
+                                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Verification</p>
+                                <p className="text-2xl font-bold text-white">N/A</p>
+                                <p className="text-xs text-gray-400 mt-1">No sources</p>
+                              </div>
+                            );
+                          }
+                          
+                          const supportPercent = ((supportCount / totalSources) * 100).toFixed(1);
+                          const contradictPercent = ((contradictCount / totalSources) * 100).toFixed(1);
+                          
+                          if (supportCount >= contradictCount) {
+                            return (
+                              <div className="bg-green-500/10 p-6 rounded-lg border border-green-500/30">
+                                <p className="text-sm font-semibold text-green-400 uppercase tracking-wide mb-2">Support</p>
+                                <p className="text-2xl font-bold text-white">{supportPercent}%</p>
+                                <p className="text-xs text-gray-400 mt-1">{supportCount} of {totalSources} sources</p>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="bg-red-500/10 p-6 rounded-lg border border-red-500/30">
+                                <p className="text-sm font-semibold text-red-400 uppercase tracking-wide mb-2">Contradiction</p>
+                                <p className="text-2xl font-bold text-white">{contradictPercent}%</p>
+                                <p className="text-xs text-gray-400 mt-1">{contradictCount} of {totalSources} sources</p>
+                              </div>
+                            );
+                          }
+                        })()}
+                        {result.domain_credibility != null && result.domain_credibility !== undefined && (
+                          <div className={`p-6 rounded-lg border ${result.domain_credibility >= 70 ? 'bg-blue-500/10 border-blue-500/30' : result.domain_credibility >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                            <p className={`text-sm font-semibold uppercase tracking-wide mb-2 ${result.domain_credibility >= 70 ? 'text-blue-400' : result.domain_credibility >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>Domain Score</p>
+                            <p className="text-2xl font-bold text-white">{typeof result.domain_credibility === 'number' ? result.domain_credibility.toFixed(1) : result.domain_credibility}/100</p>
+                          </div>
+                        )}
                       </div>
 
                       {/* Cross-Check Button */}

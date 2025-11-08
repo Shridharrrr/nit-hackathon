@@ -11,6 +11,10 @@ class CommunityService:
         self.comments_collection = 'post_comments'
         self.comment_votes_collection = 'comment_votes'
         self.analyses_collection = 'news_analyses'
+        
+        # Import domain service lazily to avoid circular imports
+        from app.services.domain_service import DomainService
+        self.domain_service = DomainService()
     
     def share_to_community(self, analysis_id: str, user_id: str, user_name: str = None, user_picture: str = None) -> str:
         """
@@ -53,6 +57,7 @@ class CommunityService:
                 'sentiment': analysis_data.get('sentiment'),
                 'confidence': analysis_data.get('confidence'),
                 'cross_check': analysis_data.get('cross_check', {}),
+                'domain_credibility': analysis_data.get('domain_credibility', 50.0),
                 'upvotes': 0,
                 'downvotes': 0,
                 'comment_count': 0,
@@ -196,6 +201,11 @@ class CommunityService:
             post_data = post_doc.to_dict()
             upvotes = post_data.get('upvotes', 0)
             downvotes = post_data.get('downvotes', 0)
+            old_upvotes = upvotes
+            old_downvotes = downvotes
+            post_url = post_data.get('url')
+            
+            vote_change = 0  # Track vote change for domain score update
             
             if vote_doc.exists:
                 # User has already voted
@@ -206,8 +216,10 @@ class CommunityService:
                     vote_ref.delete()
                     if vote_type == 'upvote':
                         upvotes = max(0, upvotes - 1)
+                        vote_change = -1
                     else:
                         downvotes = max(0, downvotes - 1)
+                        vote_change = 1
                 else:
                     # Change vote
                     vote_ref.set({
@@ -219,9 +231,11 @@ class CommunityService:
                     if vote_type == 'upvote':
                         upvotes += 1
                         downvotes = max(0, downvotes - 1)
+                        vote_change = 2  # Changed from downvote to upvote
                     else:
                         downvotes += 1
                         upvotes = max(0, upvotes - 1)
+                        vote_change = -2  # Changed from upvote to downvote
             else:
                 # New vote
                 vote_ref.set({
@@ -232,19 +246,37 @@ class CommunityService:
                 })
                 if vote_type == 'upvote':
                     upvotes += 1
+                    vote_change = 1
                 else:
                     downvotes += 1
+                    vote_change = -1
             
-            # Update post
-            post_ref.update({
+            # Update domain credibility based on votes (1% per vote)
+            domain_score = None
+            if post_url and vote_change != 0:
+                try:
+                    # Update domain score on every vote
+                    updated_domain = self.domain_service.update_domain_from_votes(post_url, vote_change)
+                    domain_score = updated_domain.get('total_score')
+                    print(f"🔄 Domain score updated: {domain_score}")
+                except Exception as e:
+                    print(f"Failed to update domain score from votes: {e}")
+            
+            # Update post with new vote counts and domain score
+            update_data = {
                 'upvotes': upvotes,
                 'downvotes': downvotes
-            })
+            }
+            if domain_score is not None:
+                update_data['domain_credibility'] = domain_score
+            
+            post_ref.update(update_data)
             
             return {
                 'upvotes': upvotes,
                 'downvotes': downvotes,
-                'user_vote': vote_type if vote_ref.get().exists else None
+                'user_vote': vote_type if vote_ref.get().exists else None,
+                'domain_credibility': domain_score
             }
             
         except Exception as e:

@@ -50,6 +50,7 @@ class CommunityPostResponse(BaseModel):
     sentiment: Optional[str] = None
     confidence: Optional[float] = None
     cross_check: Optional[Dict[str, Any]] = None
+    domain_credibility: Optional[float] = None
     upvotes: int = 0
     downvotes: int = 0
     comment_count: int = 0

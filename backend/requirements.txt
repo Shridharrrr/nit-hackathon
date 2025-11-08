@@ -13,3 +13,4 @@ lxml
 python-dotenv
 transformers
 torch
+python-whois
