@@ -38,7 +38,7 @@ export default function Community() {
     try {
       setLoading(true);
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/community/posts?limit=50', {
+      const response = await fetch('http://127.0.0.1:8000/api/community/posts?limit=50', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -65,7 +65,7 @@ export default function Community() {
     try {
       setCommentsLoading(true);
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8000/api/community/posts/${postId}`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/community/posts/${postId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -86,7 +86,7 @@ export default function Community() {
   const handleVote = async (postId, voteType) => {
     try {
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/community/posts/vote', {
+      const response = await fetch('http://127.0.0.1:8000/api/community/posts/vote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ export default function Community() {
   const handleCommentVote = async (commentId, voteType) => {
     try {
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/community/comments/vote', {
+      const response = await fetch('http://127.0.0.1:8000/api/community/comments/vote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ export default function Community() {
     try {
       setCommentLoading(true);
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/community/comments', {
+      const response = await fetch('http://127.0.0.1:8000/api/community/comments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +186,7 @@ export default function Community() {
   const fetchCommentsForPost = async (postId) => {
     try {
       const token = await user.getIdToken();
-      const response = await fetch(`http://localhost:8000/api/community/posts/${postId}`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/community/posts/${postId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -210,7 +210,7 @@ export default function Community() {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/community/comments', {
+      const response = await fetch('http://127.0.0.1:8000/api/community/comments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -239,7 +239,7 @@ export default function Community() {
   const handleCommentVoteOnPost = async (postId, commentId, voteType) => {
     try {
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/community/comments/vote', {
+      const response = await fetch('http://127.0.0.1:8000/api/community/comments/vote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

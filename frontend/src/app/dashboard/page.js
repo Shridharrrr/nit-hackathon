@@ -35,7 +35,7 @@ export default function Dashboard() {
   const fetchHistory = async () => {
     try {
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/news/history?limit=10', {
+      const response = await fetch('http://127.0.0.1:8000/api/news/history?limit=10', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -64,7 +64,7 @@ export default function Dashboard() {
 
     try {
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/news/analyze', {
+      const response = await fetch('http://127.0.0.1:8000/api/news/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +112,7 @@ export default function Dashboard() {
     try {
       setShareLoading(true);
       const token = await user.getIdToken();
-      const response = await fetch('http://localhost:8000/api/community/share', {
+      const response = await fetch('http://127.0.0.1:8000/api/community/share', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
