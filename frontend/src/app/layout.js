@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Fake News Detector",
-  description: "AI-powered fake news detection system",
+  title: "FactFlow - AI-Powered Truth Verification",
+  description: "Verify news authenticity with advanced AI. FactFlow helps you detect misinformation and verify credibility instantly.",
 };
 
 export default function RootLayout({ children }) {

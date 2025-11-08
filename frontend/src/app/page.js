@@ -2,7 +2,19 @@
 
 import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import Loader from '../components/Loader';
 import { useRouter } from 'next/navigation';
+import { BackgroundBeams } from '../components/ui/background-beams';
+import { Instrument_Serif } from "next/font/google";
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: ["400"], // or "700" if you need bold
+  style: ["normal", "italic"], // optional
+  variable: "--font-instrument-serif", // optional: if you use CSS variables
+  display: "swap",
+});
+
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -20,29 +32,22 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+        <Loader size="xlarge" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-[#0a0a0f] text-gray-100">
       {/* Header */}
-      <header className="relative z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">FakeNews Detector</h1>
-            </div>
+      <header className="border-b border-gray-800/50 backdrop-blur-sm bg-[#0a0a0f]/80 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <h1 className="text-xl font-bold text-white tracking-tight">FactFlow</h1>
             <button
               onClick={handleGetStarted}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold rounded transition-colors"
             >
               Get Started
             </button>
@@ -51,77 +56,79 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <main className="relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+      <div className="relative overflow-hidden">
+        {/* Background Beams */}
+        <BackgroundBeams className="absolute inset-0 z-0" />
+        
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-24 sm:py-32 relative z-10">
           <div className="text-center">
-            <h2 className="text-4xl font-bold text-gray-900 sm:text-5xl md:text-6xl">
-              Combat <span className="text-blue-600">Fake News</span> with AI
+            <h2 className={`text-6xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight ${instrumentSerif.className}`}>
+              Truth Detection&nbsp;
+            
+              <span className="text-purple-500">Powered by AI</span>
             </h2>
-            <p className="mt-6 max-w-3xl mx-auto text-xl text-gray-600">
-              Leverage advanced artificial intelligence to detect misinformation and verify news authenticity. 
-              Protect yourself and others from false information with our cutting-edge detection system.
+            <p className="mt-6 max-w-2xl mx-auto text-lg text-gray-400">
+              Cut through misinformation with advanced AI analysis. Verify news authenticity instantly and protect yourself from fake content.
             </p>
-            <div className="mt-10 flex justify-center">
+            <div className="mt-12 flex gap-4 justify-center">
               <button
                 onClick={handleGetStarted}
-                className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105 shadow-lg"
+                className="px-8 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded transition-all"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Get Started Now
+                Get Started
+              </button>
+              <button
+                className="px-8 py-3.5 bg-white/5 hover:bg-white/10 text-white font-semibold rounded border border-gray-700 transition-all"
+              >
+                Learn More
               </button>
             </div>
           </div>
         </div>
+      </div>
+
+      <main>
 
         {/* Features Section */}
-        <div className="py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h3 className="text-3xl font-bold text-gray-900">Why Choose Our Platform?</h3>
-              <p className="mt-4 text-lg text-gray-600">
-                Advanced AI technology meets user-friendly design
-              </p>
-            </div>
-
-            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="py-20 border-t border-gray-800/50">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Feature 1 */}
-              <div className="text-center p-6 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-lg transition-shadow">
-                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              <div className="p-6 bg-white/5 border border-gray-800 rounded-lg hover:bg-white/10 transition-colors">
+                <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
-                <h4 className="text-xl font-semibold text-gray-900 mb-2">AI-Powered Detection</h4>
-                <p className="text-gray-600">
-                  Advanced machine learning algorithms analyze content patterns, sources, and credibility indicators.
+                <h4 className="text-lg font-semibold text-white mb-2">Instant Analysis</h4>
+                <p className="text-gray-400 text-sm">
+                  Get real-time credibility scores and detailed breakdowns in seconds.
                 </p>
               </div>
 
               {/* Feature 2 */}
-              <div className="text-center p-6 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-lg transition-shadow">
-                <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <div className="p-6 bg-white/5 border border-gray-800 rounded-lg hover:bg-white/10 transition-colors">
+                <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h4 className="text-xl font-semibold text-gray-900 mb-2">Real-time Analysis</h4>
-                <p className="text-gray-600">
-                  Get instant results with our fast processing engine that analyzes news articles in seconds.
+                <h4 className="text-lg font-semibold text-white mb-2">AI-Powered</h4>
+                <p className="text-gray-400 text-sm">
+                  Advanced machine learning models trained on millions of articles.
                 </p>
               </div>
 
               {/* Feature 3 */}
-              <div className="text-center p-6 rounded-lg bg-gradient-to-br from-purple-50 to-violet-50 hover:shadow-lg transition-shadow">
-                <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              <div className="p-6 bg-white/5 border border-gray-800 rounded-lg hover:bg-white/10 transition-colors">
+                <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <h4 className="text-xl font-semibold text-gray-900 mb-2">Secure & Private</h4>
-                <p className="text-gray-600">
-                  Your data is protected with enterprise-grade security and Google authentication.
+                <h4 className="text-lg font-semibold text-white mb-2">Secure</h4>
+                <p className="text-gray-400 text-sm">
+                  Your data is encrypted and never shared with third parties.
                 </p>
               </div>
             </div>
@@ -129,46 +136,34 @@ export default function Home() {
         </div>
 
         {/* CTA Section */}
-        <div className="py-16 bg-gradient-to-r from-blue-600 to-indigo-600">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h3 className="text-3xl font-bold text-white mb-4">
-              Ready to Fight Misinformation?
+        <div className="py-20 border-t border-gray-800/50">
+          <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
+            <h3 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              Start Verifying News Today
             </h3>
-            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-              Join thousands of users who trust our AI-powered platform to verify news authenticity and combat fake news.
+            <p className="text-lg text-gray-400 mb-8">
+              Join users fighting misinformation with AI-powered fact checking.
             </p>
             <button
               onClick={handleGetStarted}
-              className="inline-flex items-center px-8 py-4 border-2 border-white text-lg font-medium rounded-lg text-blue-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-all duration-200 transform hover:scale-105"
+              className="px-8 py-3.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded transition-all"
             >
-              Start Detecting Fake News
-              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-              </svg>
+              Get Started Free
             </button>
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="bg-gray-900 text-white py-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <footer className="border-t border-gray-800/50 py-12">
+          <div className="max-w-6xl mx-auto px-6 lg:px-8">
             <div className="text-center">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h4 className="text-xl font-bold">FakeNews Detector</h4>
-              </div>
-              <p className="text-gray-400 mb-6">
-                Empowering users with AI-driven truth verification
+              <h4 className="text-lg font-bold text-white mb-2">FactFlow</h4>
+              <p className="text-gray-500 text-sm mb-6">
+                AI-driven truth verification
               </p>
-              <div className="border-t border-gray-800 pt-6">
-                <p className="text-gray-500 text-sm">
-                  © 2024 FakeNews Detector. Built with Next.js and FastAPI.
-                </p>
-              </div>
+              <p className="text-gray-600 text-xs">
+                © 2024 FactFlow. All rights reserved.
+              </p>
             </div>
           </div>
         </footer>

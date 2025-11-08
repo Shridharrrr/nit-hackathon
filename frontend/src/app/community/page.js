@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
+import Loader from '../../components/Loader';
 import { useRouter } from 'next/navigation';
 
 export default function Community() {
@@ -84,6 +85,35 @@ export default function Community() {
   };
 
   const handleVote = async (postId, voteType) => {
+    // Optimistic update
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const oldVote = post.user_vote;
+    let newUpvotes = post.upvotes;
+    let newDownvotes = post.downvotes;
+
+    if (oldVote === voteType) {
+      // Remove vote
+      if (voteType === 'upvote') newUpvotes--;
+      else newDownvotes--;
+    } else {
+      // Change or add vote
+      if (oldVote === 'upvote') newUpvotes--;
+      if (oldVote === 'downvote') newDownvotes--;
+      if (voteType === 'upvote') newUpvotes++;
+      else newDownvotes++;
+    }
+
+    const newVote = oldVote === voteType ? null : voteType;
+
+    // Update UI immediately
+    setPosts(posts.map(p => 
+      p.id === postId 
+        ? { ...p, upvotes: newUpvotes, downvotes: newDownvotes, user_vote: newVote }
+        : p
+    ));
+
     try {
       const token = await user.getIdToken();
       const response = await fetch('http://127.0.0.1:8000/api/community/posts/vote', {
@@ -97,19 +127,28 @@ export default function Community() {
       
       if (response.ok) {
         const data = await response.json();
-        // Update posts list
-        setPosts(posts.map(post => 
-          post.id === postId 
-            ? { ...post, upvotes: data.upvotes, downvotes: data.downvotes, user_vote: data.user_vote }
-            : post
+        // Sync with server response
+        setPosts(posts.map(p => 
+          p.id === postId 
+            ? { ...p, upvotes: data.upvotes, downvotes: data.downvotes, user_vote: data.user_vote }
+            : p
         ));
-        // Update selected post if viewing details
-        if (selectedPost && selectedPost.id === postId) {
-          setSelectedPost({ ...selectedPost, upvotes: data.upvotes, downvotes: data.downvotes, user_vote: data.user_vote });
-        }
+      } else {
+        // Revert on error
+        setPosts(posts.map(p => 
+          p.id === postId 
+            ? { ...p, upvotes: post.upvotes, downvotes: post.downvotes, user_vote: oldVote }
+            : p
+        ));
       }
     } catch (error) {
       console.error('Failed to vote:', error);
+      // Revert on error
+      setPosts(posts.map(p => 
+        p.id === postId 
+          ? { ...p, upvotes: post.upvotes, downvotes: post.downvotes, user_vote: oldVote }
+          : p
+      ));
     }
   };
 
@@ -237,6 +276,35 @@ export default function Community() {
   };
 
   const handleCommentVoteOnPost = async (postId, commentId, voteType) => {
+    const comment = postComments[postId]?.find(c => c.id === commentId);
+    if (!comment) return;
+
+    const oldVote = comment.user_vote;
+    let newUpvotes = comment.upvotes;
+    let newDownvotes = comment.downvotes;
+
+    if (oldVote === voteType) {
+      if (voteType === 'upvote') newUpvotes--;
+      else newDownvotes--;
+    } else {
+      if (oldVote === 'upvote') newUpvotes--;
+      if (oldVote === 'downvote') newDownvotes--;
+      if (voteType === 'upvote') newUpvotes++;
+      else newDownvotes++;
+    }
+
+    const newVote = oldVote === voteType ? null : voteType;
+
+    // Optimistic update
+    setPostComments(prev => ({
+      ...prev,
+      [postId]: prev[postId].map(c => 
+        c.id === commentId 
+          ? { ...c, upvotes: newUpvotes, downvotes: newDownvotes, user_vote: newVote }
+          : c
+      )
+    }));
+
     try {
       const token = await user.getIdToken();
       const response = await fetch('http://127.0.0.1:8000/api/community/comments/vote', {
@@ -250,29 +318,46 @@ export default function Community() {
       
       if (response.ok) {
         const data = await response.json();
-        // Update the comment in the post's comments
         setPostComments(prev => ({
           ...prev,
-          [postId]: prev[postId].map(comment => 
-            comment.id === commentId 
-              ? { ...comment, upvotes: data.upvotes, downvotes: data.downvotes, user_vote: data.user_vote }
-              : comment
+          [postId]: prev[postId].map(c => 
+            c.id === commentId 
+              ? { ...c, upvotes: data.upvotes, downvotes: data.downvotes, user_vote: data.user_vote }
+              : c
+          )
+        }));
+      } else {
+        // Revert on error
+        setPostComments(prev => ({
+          ...prev,
+          [postId]: prev[postId].map(c => 
+            c.id === commentId 
+              ? { ...c, upvotes: comment.upvotes, downvotes: comment.downvotes, user_vote: oldVote }
+              : c
           )
         }));
       }
     } catch (error) {
       console.error('Failed to vote on comment:', error);
+      setPostComments(prev => ({
+        ...prev,
+        [postId]: prev[postId].map(c => 
+          c.id === commentId 
+            ? { ...c, upvotes: comment.upvotes, downvotes: comment.downvotes, user_vote: oldVote }
+            : c
+        )
+      }));
     }
   };
 
   const getCredibilityColor = (credibility) => {
     switch (credibility) {
       case 'Likely Credible':
-        return 'text-green-600 bg-green-50 border-green-200';
+        return 'text-green-400 bg-green-500/10 border-green-500/30';
       case 'Needs Verification':
-        return 'text-red-600 bg-red-50 border-red-200';
+        return 'text-red-400 bg-red-500/10 border-red-500/30';
       default:
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+        return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
     }
   };
 
@@ -284,80 +369,84 @@ export default function Community() {
   });
 
   const VoteButtons = ({ upvotes, downvotes, userVote, onVote }) => (
-    <div className="flex items-center space-x-4">
+    <div className="flex items-center space-x-3">
       <button
         onClick={() => onVote('upvote')}
-        className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg transition-all duration-200 ${
+        className={`flex items-center space-x-1 px-3 py-1.5 rounded transition-all ${
           userVote === 'upvote' 
-            ? 'bg-green-100 text-green-700' 
-            : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-600'
+            ? 'bg-green-500/20 text-green-400' 
+            : 'bg-white/5 text-gray-400 hover:bg-green-500/10 hover:text-green-400'
         }`}
       >
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
         </svg>
-        <span className="font-semibold">{upvotes}</span>
+        <span className="font-semibold text-sm">{upvotes}</span>
       </button>
       <button
         onClick={() => onVote('downvote')}
-        className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg transition-all duration-200 ${
+        className={`flex items-center space-x-1 px-3 py-1.5 rounded transition-all ${
           userVote === 'downvote' 
-            ? 'bg-red-100 text-red-700' 
-            : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-600'
+            ? 'bg-red-500/20 text-red-400' 
+            : 'bg-white/5 text-gray-400 hover:bg-red-500/10 hover:text-red-400'
         }`}
       >
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M16.707 10.293a1 1 0 010 1.414l-6 6a1 1 0 01-1.414 0l-6-6a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l4.293-4.293a1 1 0 011.414 0z" clipRule="evenodd" />
         </svg>
-        <span className="font-semibold">{downvotes}</span>
+        <span className="font-semibold text-sm">{downvotes}</span>
       </button>
     </div>
   );
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
+      <div className="min-h-screen bg-[#0a0a0f]">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center space-x-8">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Fake News Detector
+        <header className="bg-black/40 border-b border-gray-800/50 backdrop-blur-sm sticky top-0 z-50">
+          <div className="mx-auto px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              {/* Logo - Extreme Left */}
+              <div className="flex items-center space-x-3">
+                <h1 className="text-xl font-bold text-white">
+                  FactFlow
                 </h1>
-                <nav className="flex space-x-4">
-                  <button
-                    onClick={() => router.push('/dashboard')}
-                    className="px-4 py-2 text-gray-600 hover:text-blue-600 font-medium transition-colors"
-                  >
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={() => router.push('/community')}
-                    className="px-4 py-2 text-blue-600 border-b-2 border-blue-600 font-medium"
-                  >
-                    Community
-                  </button>
-                </nav>
               </div>
+
+              {/* Navigation - Center */}
+              <nav className="absolute left-1/2 transform -translate-x-1/2 flex space-x-2">
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="px-5 py-2 text-sm font-semibold text-gray-300 hover:bg-white/10 rounded transition-colors"
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => router.push('/community')}
+                  className="px-5 py-2 text-sm font-semibold text-white bg-purple-600 rounded transition-colors"
+                >
+                  Community
+                </button>
+              </nav>
               
-              <div className="flex items-center space-x-4">
+              {/* Profile & Sign Out - Extreme Right */}
+              <div className="flex items-center space-x-6">
                 <div className="flex items-center space-x-3">
                   {user?.photoURL && (
                     <img
                       src={user.photoURL}
                       alt="Profile"
-                      className="h-8 w-8 rounded-full"
+                      className="h-8 w-8 rounded-full border-2 border-purple-500/30"
                     />
                   )}
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-300">
                     {user?.displayName || user?.email}
                   </span>
                 </div>
                 
                 <button
                   onClick={handleLogout}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                  className="inline-flex items-center px-4 py-2 text-sm font-semibold text-red-400 hover:bg-red-500/10 rounded transition-colors"
                 >
                   Sign Out
                 </button>
@@ -371,42 +460,42 @@ export default function Community() {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 mb-2">
+                <h2 className="text-3xl font-bold text-white mb-2">
                   Community Feed
                 </h2>
-                <p className="text-gray-600">
-                  Explore news analyses shared by the community. Vote and discuss to help others identify misinformation.
+                <p className="text-gray-400">
+                  Explore news analyses shared by the community
                 </p>
               </div>
               
               {/* Filter Buttons */}
-              <div className="flex items-center space-x-2 bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+              <div className="flex items-center space-x-2 bg-white/5 rounded-lg p-1 border border-gray-800">
                 <button
                   onClick={() => setFilter('all')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded text-sm font-medium transition-all ${
                     filter === 'all'
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-purple-600 text-white'
+                      : 'text-gray-400 hover:bg-white/10'
                   }`}
                 >
                   All Posts
                 </button>
                 <button
                   onClick={() => setFilter('credible')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded text-sm font-medium transition-all ${
                     filter === 'credible'
-                      ? 'bg-green-600 text-white shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-400 hover:bg-white/10'
                   }`}
                 >
                   Credible
                 </button>
                 <button
                   onClick={() => setFilter('needs-verification')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded text-sm font-medium transition-all ${
                     filter === 'needs-verification'
-                      ? 'bg-red-600 text-white shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-red-600 text-white'
+                      : 'text-gray-400 hover:bg-white/10'
                   }`}
                 >
                   Needs Check
@@ -417,17 +506,17 @@ export default function Community() {
 
           {loading ? (
             <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              <Loader size="large" />
             </div>
           ) : filteredPosts.length === 0 ? (
             <div className="text-center py-20">
-              <svg className="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="mx-auto h-16 w-16 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <h3 className="mt-4 text-lg font-semibold text-gray-900">
+              <h3 className="mt-4 text-lg font-semibold text-white">
                 {posts.length === 0 ? 'No posts yet' : 'No posts match this filter'}
               </h3>
-              <p className="mt-2 text-gray-600">
+              <p className="mt-2 text-gray-400">
                 {posts.length === 0 ? 'Be the first to share an analysis with the community!' : 'Try selecting a different filter to see more posts.'}
               </p>
             </div>
@@ -436,7 +525,7 @@ export default function Community() {
               {filteredPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-md border border-gray-200/50 p-6 hover:shadow-2xl hover:scale-[1.01] transition-all duration-300"
+                  className="bg-white/5 backdrop-blur-sm rounded-lg border border-gray-800 p-6 hover:bg-white/10 hover:border-purple-500/50 transition-all"
                 >
                   {/* Post Header */}
                   <div className="flex items-start justify-between mb-5">
@@ -445,15 +534,15 @@ export default function Community() {
                         <img
                           src={post.user_picture}
                           alt={post.user_name}
-                          className="h-11 w-11 rounded-full ring-2 ring-blue-100"
+                          className="h-10 w-10 rounded-full ring-2 ring-purple-500/30"
                         />
                       ) : (
-                        <div className="h-11 w-11 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg">
+                        <div className="h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold">
                           {(post.user_name || 'A')[0].toUpperCase()}
                         </div>
                       )}
                       <div>
-                        <p className="font-bold text-gray-900">{post.user_name || 'Anonymous'}</p>
+                        <p className="font-bold text-white">{post.user_name || 'Anonymous'}</p>
                         <p className="text-xs text-gray-500 flex items-center">
                           <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
@@ -475,42 +564,42 @@ export default function Community() {
 
                   {/* Post Content */}
                   <div className="mb-5">
-                    <h3 className="text-xl font-bold text-gray-900 mb-3 leading-tight">{post.title}</h3>
-                    <p className="text-sm text-gray-700 mb-4 leading-relaxed">{post.summary}</p>
-                    <div className="flex items-center space-x-2 text-xs bg-gray-50 px-3 py-2 rounded-lg">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h3 className="text-xl font-bold text-white mb-3 leading-tight">{post.title}</h3>
+                    <p className="text-sm text-gray-300 mb-4 leading-relaxed">{post.summary}</p>
+                    <div className="flex items-center space-x-2 text-xs bg-black/40 px-3 py-2 rounded-lg">
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                       </svg>
-                      <a href={post.url} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 truncate font-medium text-gray-600">
+                      <a href={post.url} target="_blank" rel="noopener noreferrer" className="hover:text-purple-400 truncate text-gray-400">
                         {post.url}
                       </a>
                     </div>
                   </div>
 
                   {/* Verdict */}
-                  <div className="mb-5 p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-xl border border-blue-100 shadow-sm">
+                  <div className="mb-5 p-4 bg-purple-500/10 rounded-lg border border-purple-500/30">
                     <div className="flex items-center mb-2">
-                      <svg className="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-5 h-5 text-purple-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
-                      <p className="text-sm font-bold text-blue-900">AI Verdict</p>
+                      <p className="text-sm font-bold text-purple-400">AI Verdict</p>
                     </div>
-                    <p className="text-gray-800 leading-relaxed">{post.verdict}</p>
+                    <p className="text-gray-200 leading-relaxed">{post.verdict}</p>
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center justify-between mb-5 pb-5 border-b border-gray-200">
+                  <div className="flex items-center justify-between mb-5 pb-5 border-b border-gray-800">
                     <div className="flex items-center space-x-6">
                       <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                        <span className="text-sm font-medium text-gray-600">
-                          Sentiment: <span className="text-blue-700 font-bold">{post.sentiment}</span>
+                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                        <span className="text-sm text-gray-400">
+                          Sentiment: <span className="text-purple-400 font-semibold">{post.sentiment}</span>
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                        <span className="text-sm font-medium text-gray-600">
-                          Confidence: <span className="text-green-700 font-bold">{post.confidence}%</span>
+                        <span className="text-sm text-gray-400">
+                          Confidence: <span className="text-green-400 font-semibold">{post.confidence}%</span>
                         </span>
                       </div>
                     </div>
@@ -526,10 +615,10 @@ export default function Community() {
                     />
                     <button
                       onClick={() => toggleComments(post.id)}
-                      className={`flex items-center space-x-2 px-5 py-2.5 rounded-lg transition-all shadow-md hover:shadow-lg transform hover:scale-105 ${
+                      className={`flex items-center space-x-2 px-5 py-2.5 rounded transition-all ${
                         expandedPost === post.id
-                          ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white'
-                          : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700'
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-purple-600 text-white hover:bg-purple-700'
                       }`}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -551,7 +640,7 @@ export default function Community() {
 
                   {/* Inline Comments Section */}
                   {expandedPost === post.id && (
-                    <div className="mt-6 pt-6 border-t border-gray-200 animate-slide-down">
+                    <div className="mt-6 pt-6 border-t border-gray-800">
                       {/* Add Comment Input */}
                       <div className="mb-6">
                         <div className="flex items-start space-x-3">
@@ -559,10 +648,10 @@ export default function Community() {
                             <img
                               src={user.photoURL}
                               alt="Your avatar"
-                              className="h-9 w-9 rounded-full ring-2 ring-blue-100"
+                              className="h-9 w-9 rounded-full ring-2 ring-purple-500/30"
                             />
                           ) : (
-                            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+                            <div className="h-9 w-9 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">
                               {(user?.displayName || user?.email || 'U')[0].toUpperCase()}
                             </div>
                           )}
@@ -578,14 +667,14 @@ export default function Community() {
                               }}
                               placeholder="Write a comment..."
                               rows="2"
-                              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none transition-all text-sm"
+                              className="w-full px-4 py-2.5 bg-black/40 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none transition-all text-sm placeholder:text-gray-500"
                             />
                             <div className="flex items-center justify-between mt-2">
-                              <p className="text-xs text-gray-400">Press Enter to post</p>
+                              <p className="text-xs text-gray-500">Press Enter to post</p>
                               <button
                                 onClick={() => handleAddCommentToPost(post.id)}
                                 disabled={!newComments[post.id]?.trim()}
-                                className="px-4 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed transition-all text-sm font-semibold shadow-sm hover:shadow-md"
+                                className="px-4 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed transition-all text-sm font-semibold"
                               >
                                 Post
                               </button>
@@ -597,26 +686,26 @@ export default function Community() {
                       {/* Comments List */}
                       <div className="space-y-3">
                         {postComments[post.id]?.length === 0 ? (
-                          <p className="text-center text-gray-400 py-6 text-sm">No comments yet. Be the first to comment!</p>
+                          <p className="text-center text-gray-500 py-6 text-sm">No comments yet. Be the first to comment!</p>
                         ) : (
                           postComments[post.id]?.map((comment) => (
-                            <div key={comment.id} className="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
+                            <div key={comment.id} className="bg-black/40 rounded-lg p-4 border border-gray-800 hover:bg-black/60 transition-colors">
                               <div className="flex items-start space-x-3 mb-3">
                                 {comment.user_picture ? (
                                   <img
                                     src={comment.user_picture}
                                     alt={comment.user_name}
-                                    className="h-8 w-8 rounded-full ring-2 ring-gray-200"
+                                    className="h-8 w-8 rounded-full ring-2 ring-purple-500/30"
                                   />
                                 ) : (
-                                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold text-xs">
+                                  <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-xs">
                                     {(comment.user_name || 'A')[0].toUpperCase()}
                                   </div>
                                 )}
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between mb-1">
-                                    <p className="font-bold text-gray-900 text-sm">{comment.user_name || 'Anonymous'}</p>
-                                    <p className="text-xs text-gray-400 flex items-center">
+                                    <p className="font-bold text-white text-sm">{comment.user_name || 'Anonymous'}</p>
+                                    <p className="text-xs text-gray-500 flex items-center">
                                       <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                                       </svg>
@@ -628,7 +717,7 @@ export default function Community() {
                                       })}
                                     </p>
                                   </div>
-                                  <p className="text-gray-700 text-sm leading-relaxed">{comment.content}</p>
+                                  <p className="text-gray-300 text-sm leading-relaxed">{comment.content}</p>
                                 </div>
                               </div>
                               <div className="flex items-center space-x-2 ml-11">
