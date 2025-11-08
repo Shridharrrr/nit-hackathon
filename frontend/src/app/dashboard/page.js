@@ -140,7 +140,7 @@ export default function Dashboard() {
                       rows={6}
                       value={newsText}
                       onChange={(e) => setNewsText(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder:text-gray-500"
                       placeholder="Paste your news article text or URL here..."
                     />
                   </div>
