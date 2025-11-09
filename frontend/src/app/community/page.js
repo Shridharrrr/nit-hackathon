@@ -637,14 +637,14 @@ export default function Community() {
                       const neutralCount = post.cross_check.neutral_count ?? 0;
                       const totalSources = post.cross_check.total_sources ?? (supportCount + contradictCount + neutralCount);
                       
-                      // Use original counts for display
+                      // Use original counts for display and calculation
                       const displaySupport = post.cross_check.original_supports ?? (supportCount / 10);
                       const displayContradict = post.cross_check.original_contradicts ?? (contradictCount / 10);
                       const displayNeutral = post.cross_check.original_neutral ?? (neutralCount / 10);
                       
-                      // Calculate percentage: supported / (supported + neutral)
-                      const supportNeutralTotal = supportCount + neutralCount;
-                      const supportPercent = supportNeutralTotal > 0 ? ((supportCount / supportNeutralTotal) * 100).toFixed(1) : supportCount.toFixed(1);
+                      // Calculate percentage using original counts: (supporting + neutral*0.5) / (supporting + neutral) * 100
+                      const originalSupportNeutralTotal = displaySupport + displayNeutral;
+                      const supportPercent = originalSupportNeutralTotal > 0 ? (((displaySupport + (displayNeutral * 0.5)) / originalSupportNeutralTotal) * 100).toFixed(1) : '0';
                       
                       if (totalSources === 0 && !post.cross_check.verdict) {
                         return (
@@ -702,9 +702,7 @@ export default function Community() {
                           }`}>Credibility</p>
                         </div>
                         <p className="text-lg font-bold text-white">{post.cross_check.verdict}</p>
-                        {post.cross_check.credibility_score != null && (
-                          <p className="text-xs text-gray-400 mt-1">Score: {(post.cross_check.credibility_score).toFixed(0)}%</p>
-                        )}
+
                       </div>
                     )}
                     {post.domain_credibility != null && post.domain_credibility !== undefined && (

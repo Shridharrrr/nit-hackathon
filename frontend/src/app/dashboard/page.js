@@ -437,14 +437,14 @@ export default function Dashboard() {
                           const neutralCount = result.cross_check.neutral_count ?? 0;
                           const totalSources = result.cross_check.total_sources ?? (supportCount + contradictCount + neutralCount);
                           
-                          // Use original counts for display
+                          // Use original counts for display and calculation
                           const displaySupport = result.cross_check.original_supports ?? (supportCount / 10);
                           const displayContradict = result.cross_check.original_contradicts ?? (contradictCount / 10);
                           const displayNeutral = result.cross_check.original_neutral ?? (neutralCount / 10);
                           
-                          // Calculate percentage: supported / (supported + neutral)
-                          const supportNeutralTotal = supportCount + neutralCount;
-                          const supportPercent = supportNeutralTotal > 0 ? ((supportCount / supportNeutralTotal) * 100).toFixed(1) : supportCount.toFixed(1);
+                          // Calculate percentage using original counts: (supporting + neutral*0.5) / (supporting + neutral) * 100
+                          const originalSupportNeutralTotal = displaySupport + displayNeutral;
+                          const supportPercent = originalSupportNeutralTotal > 0 ? (((displaySupport + (displayNeutral * 0.5)) / originalSupportNeutralTotal) * 100).toFixed(1) : '0';
                           
                           if (totalSources === 0 && !result.cross_check.verdict) {
                             return (
@@ -486,9 +486,7 @@ export default function Dashboard() {
                               'text-yellow-400'
                             }`}>Credibility</p>
                             <p className="text-2xl font-bold text-white">{result.cross_check.verdict}</p>
-                            {result.cross_check.credibility_score != null && (
-                              <p className="text-xs text-gray-400 mt-1">Score: {(result.cross_check.credibility_score).toFixed(0)}%</p>
-                            )}
+                         
                           </div>
                         )}
                         {result.domain_credibility != null && result.domain_credibility !== undefined && (

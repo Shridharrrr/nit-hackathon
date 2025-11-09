@@ -118,12 +118,17 @@ class DomainService:
         # Recalculate analysis score
         analysis_score = self.calculate_analysis_score(new_supporting, new_contradicting)
         
-        # Recalculate total score
+        # Calculate supporting percentage bonus
+        total_sources = new_supporting + new_contradicting
+        supporting_percentage = (new_supporting / total_sources * 100) if total_sources > 0 else 0
+        credibility_bonus = 0.5 if supporting_percentage > 66 else 0.0
+        
+        # Recalculate total score with bonus
         total_score = self.calculate_total_score(
             domain_data.get('https_score', 0.0),
             analysis_score,
             domain_data.get('community_score', 0.0)
-        )
+        ) + credibility_bonus
         
         # Update database
         domain_ref.update({
