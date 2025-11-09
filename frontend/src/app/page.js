@@ -77,11 +77,7 @@ export default function Home() {
               >
                 Get Started
               </button>
-              <button
-                className="px-8 py-3.5 bg-white/5 hover:bg-white/10 text-white font-semibold rounded border border-gray-700 transition-all"
-              >
-                Learn More
-              </button>
+              
             </div>
           </div>
         </div>
