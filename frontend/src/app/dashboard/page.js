@@ -78,6 +78,7 @@ export default function Dashboard() {
       const data = await response.json();
       console.log('📊 Analysis response:', data);
       console.log('🔍 Domain credibility:', data.domain_credibility);
+      console.log('🔍 Cross-check data:', data.cross_check);
 
       if (response.ok && data.success) {
         setResult(data);
@@ -141,17 +142,6 @@ export default function Dashboard() {
       alert('An error occurred while sharing');
     } finally {
       setShareLoading(false);
-    }
-  };
-
-  const getCredibilityColor = (credibility) => {
-    switch (credibility) {
-      case 'Likely Credible':
-        return 'text-green-400 bg-green-500/10 border-green-500/30';
-      case 'Needs Verification':
-        return 'text-red-400 bg-red-500/10 border-red-500/30';
-      default:
-        return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
     }
   };
 
@@ -248,10 +238,8 @@ export default function Dashboard() {
                       setNewsUrl(item.url);
                       setResult({
                         title: item.title,
-                        credibility: item.credibility,
                         verdict: item.verdict,
                         summary: item.summary,
-                        sentiment: item.sentiment,
                         confidence: item.confidence,
                         cross_check: item.cross_check
                       });
@@ -282,12 +270,17 @@ export default function Dashboard() {
                       
                       {/* Credibility Badge and Date */}
                       <div className="flex items-center justify-between pt-2 border-t border-gray-800">
-                        <span className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${getCredibilityColor(item.credibility)}`}>
-                          <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                          </svg>
-                          {item.credibility === 'Likely Credible' ? 'Credible' : item.credibility === 'Needs Verification' ? 'Verify' : 'Check'}
-                        </span>
+                        {item.cross_check?.verdict ? (
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded ${
+                            item.cross_check.verdict === 'Likely True' ? 'bg-green-500/20 text-green-400' : 
+                            item.cross_check.verdict === 'Likely False' ? 'bg-red-500/20 text-red-400' : 
+                            'bg-yellow-500/20 text-yellow-400'
+                          }`}>
+                            {item.cross_check.verdict}
+                          </span>
+                        ) : (
+                          <span></span>
+                        )}
                         <span className="text-xs text-gray-500">
                           {new Date(item.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </span>
@@ -406,17 +399,6 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* Credibility Badge */}
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Credibility Assessment</h4>
-                        <div className={`inline-flex items-center px-6 py-3 rounded-lg border ${getCredibilityColor(result.credibility)}`}>
-                          <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="text-lg font-bold">{result.credibility}</span>
-                        </div>
-                      </div>
-
                       {/* Verdict */}
                       <div>
                         <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">AI Verdict</h4>
@@ -436,47 +418,79 @@ export default function Dashboard() {
                       )}
 
                       {/* Stats Grid */}
-                      <div className={`grid ${result.domain_credibility != null && result.domain_credibility !== undefined ? 'grid-cols-3' : 'grid-cols-2'} gap-6`}>
-                        <div className="bg-purple-500/10 p-6 rounded-lg border border-purple-500/30">
-                          <p className="text-sm font-semibold text-purple-400 uppercase tracking-wide mb-2">Classification</p>
-                          <p className="text-2xl font-bold text-white">{result.sentiment}</p>
-                        </div>
+                      <div className={`grid ${result.cross_check?.verdict && result.domain_credibility != null && result.domain_credibility !== undefined ? 'grid-cols-3' : result.domain_credibility != null && result.domain_credibility !== undefined ? 'grid-cols-2' : result.cross_check?.verdict ? 'grid-cols-2' : 'grid-cols-1'} gap-6`}>
                         {(() => {
-                          const supportCount = result.cross_check?.support_sources?.length || 0;
-                          const contradictCount = result.cross_check?.contradict_sources?.length || 0;
-                          const totalSources = supportCount + contradictCount;
-                          
-                          if (totalSources === 0) {
+                          // Check if cross_check data exists
+                          if (!result.cross_check) {
                             return (
                               <div className="bg-gray-500/10 p-6 rounded-lg border border-gray-500/30">
-                                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Verification</p>
+                                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Cross-Check</p>
                                 <p className="text-2xl font-bold text-white">N/A</p>
-                                <p className="text-xs text-gray-400 mt-1">No sources</p>
+                                <p className="text-xs text-gray-400 mt-1">No data available</p>
                               </div>
                             );
                           }
+
+                          // Use multiplied counts for percentage calculation
+                          const supportCount = result.cross_check.supports_count ?? 0;
+                          const contradictCount = result.cross_check.contradicts_count ?? 0;
+                          const neutralCount = result.cross_check.neutral_count ?? 0;
+                          const totalSources = result.cross_check.total_sources ?? (supportCount + contradictCount + neutralCount);
                           
-                          const supportPercent = ((supportCount / totalSources) * 100).toFixed(1);
-                          const contradictPercent = ((contradictCount / totalSources) * 100).toFixed(1);
+                          // Use original counts for display
+                          const displaySupport = result.cross_check.original_supports ?? (supportCount / 10);
+                          const displayContradict = result.cross_check.original_contradicts ?? (contradictCount / 10);
+                          const displayNeutral = result.cross_check.original_neutral ?? (neutralCount / 10);
+                          
+                          // Calculate percentage: supported / (supported + neutral)
+                          const supportNeutralTotal = supportCount + neutralCount;
+                          const supportPercent = supportNeutralTotal > 0 ? ((supportCount / supportNeutralTotal) * 100).toFixed(1) : supportCount.toFixed(1);
+                          
+                          if (totalSources === 0 && !result.cross_check.verdict) {
+                            return (
+                              <div className="bg-gray-500/10 p-6 rounded-lg border border-gray-500/30">
+                                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-2">Cross-Check</p>
+                                <p className="text-2xl font-bold text-white">N/A</p>
+                                <p className="text-xs text-gray-400 mt-1">No sources found</p>
+                              </div>
+                            );
+                          }
                           
                           if (supportCount >= contradictCount) {
                             return (
                               <div className="bg-green-500/10 p-6 rounded-lg border border-green-500/30">
                                 <p className="text-sm font-semibold text-green-400 uppercase tracking-wide mb-2">Support</p>
                                 <p className="text-2xl font-bold text-white">{supportPercent}%</p>
-                                <p className="text-xs text-gray-400 mt-1">{supportCount} of {totalSources} sources</p>
+                                <p className="text-xs text-gray-400 mt-1">{displaySupport} supporting · {displayContradict} contradicting{displayNeutral > 0 ? ` · ${displayNeutral} neutral` : ''}</p>
                               </div>
                             );
                           } else {
                             return (
                               <div className="bg-red-500/10 p-6 rounded-lg border border-red-500/30">
                                 <p className="text-sm font-semibold text-red-400 uppercase tracking-wide mb-2">Contradiction</p>
-                                <p className="text-2xl font-bold text-white">{contradictPercent}%</p>
-                                <p className="text-xs text-gray-400 mt-1">{contradictCount} of {totalSources} sources</p>
+                                <p className="text-2xl font-bold text-white">{supportPercent}%</p>
+                                <p className="text-xs text-gray-400 mt-1">{displayContradict} contradicting · {displaySupport} supporting{displayNeutral > 0 ? ` · ${displayNeutral} neutral` : ''}</p>
                               </div>
                             );
                           }
                         })()}
+                        {result.cross_check?.verdict && (
+                          <div className={`p-6 rounded-lg border ${
+                            result.cross_check.verdict === 'Likely True' ? 'bg-green-500/10 border-green-500/30' : 
+                            result.cross_check.verdict === 'Likely False' ? 'bg-red-500/10 border-red-500/30' : 
+                            'bg-yellow-500/10 border-yellow-500/30'
+                          }`}>
+                            <p className={`text-sm font-semibold uppercase tracking-wide mb-2 ${
+                              result.cross_check.verdict === 'Likely True' ? 'text-green-400' : 
+                              result.cross_check.verdict === 'Likely False' ? 'text-red-400' : 
+                              'text-yellow-400'
+                            }`}>Credibility</p>
+                            <p className="text-2xl font-bold text-white">{result.cross_check.verdict}</p>
+                            {result.cross_check.credibility_score != null && (
+                              <p className="text-xs text-gray-400 mt-1">Score: {(result.cross_check.credibility_score).toFixed(0)}%</p>
+                            )}
+                          </div>
+                        )}
                         {result.domain_credibility != null && result.domain_credibility !== undefined && (
                           <div className={`p-6 rounded-lg border ${result.domain_credibility >= 70 ? 'bg-blue-500/10 border-blue-500/30' : result.domain_credibility >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
                             <p className={`text-sm font-semibold uppercase tracking-wide mb-2 ${result.domain_credibility >= 70 ? 'text-blue-400' : result.domain_credibility >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>Domain Score</p>

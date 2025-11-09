@@ -148,7 +148,7 @@ Summary:"""
     
     def analyze_sentiment(self, content: str) -> Dict[str, str]:
         """
-        Analyze sentiment and detect fake news using local HuggingFace model
+        Analyze credibility and detect fake news using local HuggingFace model
         Uses mrm8488/bert-tiny-finetuned-fake-news-detection model
         Returns verdict in max 2 lines
         """
@@ -184,7 +184,6 @@ Summary:"""
             
             # Map labels to our format
             if label == "LABEL_0":  # REAL news
-                sentiment = "REAL"
                 if confidence > 0.8:
                     verdict = "High confidence this is real news. Content appears credible and fact-based."
                     credibility = "Likely Credible"
@@ -195,7 +194,6 @@ Summary:"""
                     verdict = "Low confidence assessment. Verify claims with multiple trusted sources before sharing."
                     credibility = "Neutral"
             else:  # LABEL_1 - FAKE news
-                sentiment = "FAKE"
                 if confidence > 0.8:
                     verdict = "High confidence this may be fake news. Exercise extreme caution and verify from trusted sources."
                     credibility = "Needs Verification"
@@ -211,8 +209,6 @@ Summary:"""
             
             return {
                 "verdict": verdict,
-                "credibility": credibility,
-                "sentiment": sentiment,
                 "confidence": normalized_confidence
             }
             
@@ -224,7 +220,7 @@ Summary:"""
     
     def _fallback_sentiment_analysis(self, content: str) -> Dict[str, str]:
         """
-        Fallback sentiment analysis using basic keyword matching
+        Fallback credibility analysis using basic keyword matching
         """
         content_lower = content.lower()
         
@@ -245,26 +241,22 @@ Summary:"""
         negative_count = sum(1 for word in negative_words if word in content_lower)
         sensational_count = sum(1 for phrase in sensational_words if phrase in content_lower)
         
-        # Calculate basic sentiment
+        # Calculate basic credibility
         total_words = len(content.split())
         
         if sensational_count > 2:
-            sentiment = "FAKE"
             confidence = 65.0
             verdict = "Article contains sensational language. Exercise caution and verify from trusted sources."
             credibility = "Needs Verification"
         elif positive_count > negative_count and positive_count > 3:
-            sentiment = "REAL"
             confidence = 60.0 + min(positive_count * 2, 20)
             verdict = "Article shows credible tone. Content appears informative but always cross-check important facts."
             credibility = "Likely Credible"
         elif negative_count > positive_count and negative_count > 3:
-            sentiment = "FAKE"
             confidence = 60.0 + min(negative_count * 2, 20)
             verdict = "Article has concerning indicators. Verify claims with multiple reliable sources before sharing."
             credibility = "Needs Verification"
         else:
-            sentiment = "REAL"
             confidence = 55.0
             verdict = "Article appears balanced. Always verify important claims with established news sources."
             credibility = "Neutral"
@@ -274,8 +266,6 @@ Summary:"""
         
         return {
             "verdict": verdict,
-            "credibility": credibility,
-            "sentiment": sentiment,
             "confidence": normalized_confidence
         }
     
@@ -284,7 +274,7 @@ Summary:"""
         Complete news analysis pipeline:
         1. Scrape URL
         2. Generate summary with Gemini
-        3. Analyze sentiment with HuggingFace
+        3. Analyze credibility with HuggingFace
         4. Get cross-check from n8n webhook
         """
         try:
@@ -294,7 +284,7 @@ Summary:"""
             # Step 2: Generate summary
             summary = self.generate_summary(scraped_data['content'])
             
-            # Step 3: Analyze sentiment
+            # Step 3: Analyze credibility
             analysis = self.analyze_sentiment(scraped_data['content'])
             
             # Step 4: Get cross-check from n8n webhook
@@ -319,8 +309,6 @@ Summary:"""
                 "content": scraped_data['content'],
                 "summary": summary,
                 "verdict": analysis['verdict'],
-                "credibility": analysis['credibility'],
-                "sentiment": analysis['sentiment'],
                 "confidence": analysis['confidence'],
                 "cross_check": cross_check_data
             }

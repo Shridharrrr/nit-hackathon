@@ -46,8 +46,6 @@ class CommunityPostResponse(BaseModel):
     title: Optional[str] = None
     summary: Optional[str] = None
     verdict: Optional[str] = None
-    credibility: Optional[str] = None
-    sentiment: Optional[str] = None
     confidence: Optional[float] = None
     cross_check: Optional[Dict[str, Any]] = None
     domain_credibility: Optional[float] = None

@@ -16,7 +16,7 @@ export default function Community() {
   const [newComment, setNewComment] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
   const [commentsLoading, setCommentsLoading] = useState(false);
-  const [filter, setFilter] = useState('all'); // 'all', 'credible', 'needs-verification'
+  const [filter, setFilter] = useState('all'); // 'all'
   const [expandedPost, setExpandedPost] = useState(null); // Track which post's comments are expanded
   const [postComments, setPostComments] = useState({}); // Store comments for each post
   const [newComments, setNewComments] = useState({}); // Store new comment text for each post
@@ -391,21 +391,8 @@ export default function Community() {
     }
   };
 
-  const getCredibilityColor = (credibility) => {
-    switch (credibility) {
-      case 'Likely Credible':
-        return 'text-green-400 bg-green-500/10 border-green-500/30';
-      case 'Needs Verification':
-        return 'text-red-400 bg-red-500/10 border-red-500/30';
-      default:
-        return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30';
-    }
-  };
-
   const filteredPosts = posts.filter(post => {
     if (filter === 'all') return true;
-    if (filter === 'credible') return post.credibility === 'Likely Credible';
-    if (filter === 'needs-verification') return post.credibility === 'Needs Verification';
     return true;
   });
 
@@ -526,39 +513,6 @@ export default function Community() {
                   </button>
                 </div>
 
-                {/* Filter Buttons */}
-                <div className="flex items-center space-x-2 bg-white/5 rounded-lg p-1 border border-gray-800">
-                  <button
-                    onClick={() => setFilter('all')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-all ${
-                      filter === 'all'
-                        ? 'bg-purple-600 text-white'
-                        : 'text-gray-400 hover:bg-white/10'
-                    }`}
-                  >
-                    All Posts
-                  </button>
-                  <button
-                    onClick={() => setFilter('credible')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-all ${
-                      filter === 'credible'
-                        ? 'bg-green-600 text-white'
-                        : 'text-gray-400 hover:bg-white/10'
-                    }`}
-                  >
-                    Credible
-                  </button>
-                  <button
-                    onClick={() => setFilter('needs-verification')}
-                    className={`px-4 py-2 rounded text-sm font-medium transition-all ${
-                      filter === 'needs-verification'
-                        ? 'bg-red-600 text-white'
-                        : 'text-gray-400 hover:bg-white/10'
-                  }`}
-                >
-                  Needs Check
-                </button>
-              </div>
               </div>
             </div>
           </div>
@@ -616,9 +570,6 @@ export default function Community() {
                         </p>
                       </div>
                     </div>
-                    <span className={`px-4 py-1.5 text-xs font-bold rounded-full shadow-sm ${getCredibilityColor(post.credibility)}`}>
-                      {post.credibility}
-                    </span>
                   </div>
 
                   {/* Post Content */}
@@ -664,34 +615,49 @@ export default function Community() {
                   )}
 
                   {/* Stats Grid */}
-                  <div className={`grid ${post.domain_credibility != null && post.domain_credibility !== undefined ? 'grid-cols-3' : 'grid-cols-2'} gap-4 mb-5`}>
-                    <div className="bg-purple-500/10 p-4 rounded-lg border border-purple-500/30">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                        <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Sentiment</p>
-                      </div>
-                      <p className="text-lg font-bold text-white">{post.sentiment}</p>
-                    </div>
+                  <div className={`grid ${post.cross_check?.verdict && post.domain_credibility != null && post.domain_credibility !== undefined ? 'grid-cols-3' : post.domain_credibility != null && post.domain_credibility !== undefined ? 'grid-cols-2' : post.cross_check?.verdict ? 'grid-cols-2' : 'grid-cols-1'} gap-4 mb-5`}>
                     {(() => {
-                      const supportCount = post.cross_check?.support_sources?.length || 0;
-                      const contradictCount = post.cross_check?.contradict_sources?.length || 0;
-                      const totalSources = supportCount + contradictCount;
-                      
-                      if (totalSources === 0) {
+                      // Check if cross_check data exists
+                      if (!post.cross_check) {
                         return (
                           <div className="bg-gray-500/10 p-4 rounded-lg border border-gray-500/30">
                             <div className="flex items-center space-x-2 mb-1">
                               <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Verification</p>
+                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cross-Check</p>
                             </div>
                             <p className="text-lg font-bold text-white">N/A</p>
-                            <p className="text-xs text-gray-400 mt-1">No sources</p>
+                            <p className="text-xs text-gray-400 mt-1">No data available</p>
                           </div>
                         );
                       }
+
+                      // Use multiplied counts for percentage calculation
+                      const supportCount = post.cross_check.supports_count ?? 0;
+                      const contradictCount = post.cross_check.contradicts_count ?? 0;
+                      const neutralCount = post.cross_check.neutral_count ?? 0;
+                      const totalSources = post.cross_check.total_sources ?? (supportCount + contradictCount + neutralCount);
                       
-                      const supportPercent = ((supportCount / totalSources) * 100).toFixed(1);
-                      const contradictPercent = ((contradictCount / totalSources) * 100).toFixed(1);
+                      // Use original counts for display
+                      const displaySupport = post.cross_check.original_supports ?? (supportCount / 10);
+                      const displayContradict = post.cross_check.original_contradicts ?? (contradictCount / 10);
+                      const displayNeutral = post.cross_check.original_neutral ?? (neutralCount / 10);
+                      
+                      // Calculate percentage: supported / (supported + neutral)
+                      const supportNeutralTotal = supportCount + neutralCount;
+                      const supportPercent = supportNeutralTotal > 0 ? ((supportCount / supportNeutralTotal) * 100).toFixed(1) : supportCount.toFixed(1);
+                      
+                      if (totalSources === 0 && !post.cross_check.verdict) {
+                        return (
+                          <div className="bg-gray-500/10 p-4 rounded-lg border border-gray-500/30">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cross-Check</p>
+                            </div>
+                            <p className="text-lg font-bold text-white">N/A</p>
+                            <p className="text-xs text-gray-400 mt-1">No sources found</p>
+                          </div>
+                        );
+                      }
                       
                       if (supportCount >= contradictCount) {
                         return (
@@ -701,7 +667,7 @@ export default function Community() {
                               <p className="text-xs font-semibold text-green-400 uppercase tracking-wide">Support</p>
                             </div>
                             <p className="text-lg font-bold text-white">{supportPercent}%</p>
-                            <p className="text-xs text-gray-400 mt-1">{supportCount} of {totalSources} sources</p>
+                            <p className="text-xs text-gray-400 mt-1">{displaySupport} supporting · {displayContradict} contradicting{displayNeutral > 0 ? ` · ${displayNeutral} neutral` : ''}</p>
                           </div>
                         );
                       } else {
@@ -711,12 +677,36 @@ export default function Community() {
                               <div className="w-2 h-2 rounded-full bg-red-500"></div>
                               <p className="text-xs font-semibold text-red-400 uppercase tracking-wide">Contradiction</p>
                             </div>
-                            <p className="text-lg font-bold text-white">{contradictPercent}%</p>
-                            <p className="text-xs text-gray-400 mt-1">{contradictCount} of {totalSources} sources</p>
+                            <p className="text-lg font-bold text-white">{supportPercent}%</p>
+                            <p className="text-xs text-gray-400 mt-1">{displayContradict} contradicting · {displaySupport} supporting{displayNeutral > 0 ? ` · ${displayNeutral} neutral` : ''}</p>
                           </div>
                         );
                       }
                     })()}
+                    {post.cross_check?.verdict && (
+                      <div className={`p-4 rounded-lg border ${
+                        post.cross_check.verdict === 'Likely True' ? 'bg-green-500/10 border-green-500/30' : 
+                        post.cross_check.verdict === 'Likely False' ? 'bg-red-500/10 border-red-500/30' : 
+                        'bg-yellow-500/10 border-yellow-500/30'
+                      }`}>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <div className={`w-2 h-2 rounded-full ${
+                            post.cross_check.verdict === 'Likely True' ? 'bg-green-500' : 
+                            post.cross_check.verdict === 'Likely False' ? 'bg-red-500' : 
+                            'bg-yellow-500'
+                          }`}></div>
+                          <p className={`text-xs font-semibold uppercase tracking-wide ${
+                            post.cross_check.verdict === 'Likely True' ? 'text-green-400' : 
+                            post.cross_check.verdict === 'Likely False' ? 'text-red-400' : 
+                            'text-yellow-400'
+                          }`}>Credibility</p>
+                        </div>
+                        <p className="text-lg font-bold text-white">{post.cross_check.verdict}</p>
+                        {post.cross_check.credibility_score != null && (
+                          <p className="text-xs text-gray-400 mt-1">Score: {(post.cross_check.credibility_score).toFixed(0)}%</p>
+                        )}
+                      </div>
+                    )}
                     {post.domain_credibility != null && post.domain_credibility !== undefined && (
                       <div className={`p-4 rounded-lg border ${post.domain_credibility >= 70 ? 'bg-blue-500/10 border-blue-500/30' : post.domain_credibility >= 50 ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
                         <div className="flex items-center space-x-2 mb-1">
@@ -894,20 +884,11 @@ export default function Community() {
               <div className="flex-1 overflow-y-auto p-8 bg-gradient-to-b from-gray-50 to-white">
                 {/* Post Summary */}
                 <div className="mb-8 p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
-                  <div className="flex items-start justify-between mb-3">
-                    <h4 className="font-bold text-gray-900 text-lg flex-1">{selectedPost.title}</h4>
-                    <span className={`px-3 py-1 text-xs font-bold rounded-full ml-4 ${getCredibilityColor(selectedPost.credibility)}`}>
-                      {selectedPost.credibility}
-                    </span>
+                  <div className="mb-3">
+                    <h4 className="font-bold text-gray-900 text-lg">{selectedPost.title}</h4>
                   </div>
                   <p className="text-sm text-gray-700 leading-relaxed mb-3">{selectedPost.summary}</p>
                   <div className="flex items-center space-x-4 text-xs text-gray-500">
-                    <div className="flex items-center space-x-1">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                      </svg>
-                      <span>{selectedPost.sentiment}</span>
-                    </div>
                     <div className="flex items-center space-x-1">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />

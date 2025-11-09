@@ -23,7 +23,7 @@ async def analyze_news(
     Analyze a news article from URL:
     1. Scrape the URL content
     2. Generate summary using Gemini
-    3. Analyze sentiment using HuggingFace
+    3. Analyze credibility using HuggingFace
     4. Store results in Firestore
     """
     try:
@@ -65,8 +65,6 @@ async def analyze_news(
                     'content': result['content'][:1000],  # Store truncated content
                     'summary': result['summary'],
                     'verdict': result['verdict'],
-                    'credibility': result['credibility'],
-                    'sentiment': result['sentiment'],
                     'confidence': result['confidence'],
                     'cross_check': result.get('cross_check', {}),
                     'domain_credibility': domain_cred.get('total_score', 50.0)
@@ -80,8 +78,6 @@ async def analyze_news(
                 title=result['title'],
                 summary=result['summary'],
                 verdict=result['verdict'],
-                credibility=result['credibility'],
-                sentiment=result['sentiment'],
                 confidence=result['confidence'],
                 cross_check=result.get('cross_check'),
                 domain_credibility=domain_cred.get('total_score', 50.0),
@@ -96,8 +92,6 @@ async def analyze_news(
                 title=result['title'],
                 summary=result['summary'],
                 verdict=result['verdict'],
-                credibility=result['credibility'],
-                sentiment=result['sentiment'],
                 confidence=result['confidence'],
                 cross_check=result.get('cross_check'),
                 domain_credibility=domain_cred.get('total_score', 50.0),
