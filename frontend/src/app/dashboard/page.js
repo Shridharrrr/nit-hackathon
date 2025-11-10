@@ -54,7 +54,7 @@ export default function Dashboard() {
 
   const handleAnalyze = async () => {
     if (!newsUrl.trim()) {
-      setError('Please enter a valid URL');
+      setError('Please enter a URL or text to analyze');
       return;
     }
 
@@ -72,7 +72,7 @@ export default function Dashboard() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ url: newsUrl })
+        body: JSON.stringify({ input: newsUrl })
       });
 
       const data = await response.json();
@@ -320,12 +320,12 @@ export default function Dashboard() {
                 <div className="bg-white/5 backdrop-blur-sm border border-gray-800 rounded-lg p-6">
                   <div className="relative">
                     <input
-                      type="url"
+                      type="text"
                       value={newsUrl}
                       onChange={(e) => setNewsUrl(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && !loading && newsUrl.trim() && handleAnalyze()}
                       className="w-full px-6 py-4 pr-16 bg-black/40 text-white border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 placeholder:text-gray-500 transition-all"
-                      placeholder="Paste news article URL here..."
+                      placeholder="Paste news article URL or enter text to analyze..."
                       disabled={loading}
                     />
                     <button

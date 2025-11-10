@@ -20,15 +20,16 @@ async def analyze_news(
     current_user: Dict = Depends(get_current_user)
 ):
     """
-    Analyze a news article from URL:
-    1. Scrape the URL content
-    2. Generate summary using Gemini
-    3. Analyze credibility using HuggingFace
-    4. Store results in Firestore
+    Analyze a news article from URL or text:
+    1. Detect if input is URL or text
+    2. If URL: Scrape content. If text: Use directly and send to n8n
+    3. Generate summary using Gemini
+    4. Analyze credibility using HuggingFace
+    5. Store results in Firestore
     """
     try:
         # Perform analysis
-        result = await news_analyzer.analyze_news(request.url)
+        result = await news_analyzer.analyze_news(request.input)
         
         if not result['success']:
             raise HTTPException(
@@ -36,24 +37,23 @@ async def analyze_news(
                 detail=result.get('error', 'Failed to analyze news')
             )
         
-        # Get or create domain credibility score
-        domain_cred = domain_service.get_or_create_domain_score(request.url)
-        print(f"🔍 Initial domain score: {domain_cred.get('total_score', 50.0)}")
-        
-        # Update domain score based on cross-check results
-        cross_check = result.get('cross_check', {})
-        if cross_check:
-            supporting_sources = cross_check.get('support_sources', [])
-            contradicting_sources = cross_check.get('contradict_sources', [])
-            print(f"📊 Cross-check: {len(supporting_sources)} supporting, {len(contradicting_sources)} contradicting")
+        # Get or create domain credibility score (only for URL inputs)
+        domain_cred = {"total_score": 50.0}  # Default for text input
+        if result.get('url') != 'custom_text':
+            domain_cred = domain_service.get_or_create_domain_score(result['url'])
             
-            if supporting_sources or contradicting_sources:
-                domain_cred = domain_service.update_domain_from_analysis(
-                    request.url,
-                    supporting_sources,
-                    contradicting_sources
-                )
-                print(f"✅ Updated domain score: {domain_cred.get('total_score', 50.0)}")
+            # Update domain score based on cross-check results
+            cross_check = result.get('cross_check', {})
+            if cross_check:
+                supporting_sources = cross_check.get('support_sources', [])
+                contradicting_sources = cross_check.get('contradict_sources', [])
+                
+                if supporting_sources or contradicting_sources:
+                    domain_cred = domain_service.update_domain_from_analysis(
+                        result['url'],
+                        supporting_sources,
+                        contradicting_sources
+                    )
         
         # Save to Firestore
         try:

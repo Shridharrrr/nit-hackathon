@@ -56,7 +56,6 @@ class FirestoreService:
             
         except Exception as e:
             # If query fails (e.g., no index), fall back to simple query without ordering
-            print(f"Query with ordering failed: {str(e)}. Falling back to simple query.")
             try:
                 analyses_ref = self.db.collection(self.collection)
                 query = analyses_ref.where(filter=firestore.FieldFilter('user_id', '==', user_id)).limit(limit)

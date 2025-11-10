@@ -16,7 +16,6 @@ async def get_cross_check(title: str):
     }
     """
     if not N8N_WEBHOOK_URL:
-        print("⚠️ N8N_WEBHOOK_URL not configured.")
         return {
             "support_sources": [],
             "contradict_sources": [],
@@ -25,15 +24,9 @@ async def get_cross_check(title: str):
     
     payload = {"title": title}
     
-    print(f"🔗 Calling n8n webhook at: {N8N_WEBHOOK_URL}")
-    print(f"📦 Payload: {payload}")
-    
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(N8N_WEBHOOK_URL, json=payload)
-            
-            print(f"✅ Webhook response status: {response.status_code}")
-            print(f"📥 Response content: {response.text[:500]}")  # Log first 500 chars
             
             response.raise_for_status()
             data = response.json()
@@ -69,8 +62,6 @@ async def get_cross_check(title: str):
             original_total = original_supports + original_contradicts + original_neutral
             credibility_score = ((original_supports - original_contradicts) + (original_neutral * 0.5)) / original_total if original_total > 0 else 0
             
-            print(f"🔍 Credibility calculation: ({original_supports} - {original_contradicts}) + ({original_neutral} * 0.5) / {original_total} = {credibility_score}")
-            
             result = {
                 "support_sources": supporting_sources,
                 "contradict_sources": contradicting_sources,
@@ -87,28 +78,21 @@ async def get_cross_check(title: str):
                 "original_neutral": original_neutral
             }
             
-            print(f"✅ Cross-check successful: {supports_count} supporting, {contradicts_count} contradicting, {neutral_count} neutral")
-            print(f"📊 Total sources: {total_sources}")
-            print(f"📊 Verdict: {result['verdict']}, Credibility Score: {result['credibility_score']}")
-            
             return result
             
     except httpx.HTTPStatusError as e:
-        print(f"❌ HTTP error calling N8N webhook: {e.response.status_code} - {e.response.text}")
         return {
             "support_sources": [],
             "contradict_sources": [],
             "error": f"HTTP {e.response.status_code}: {e.response.text[:200]}"
         }
     except httpx.RequestError as e:
-        print(f"❌ Request error calling N8N webhook: {type(e).__name__}: {str(e)}")
         return {
             "support_sources": [],
             "contradict_sources": [],
             "error": f"Connection error: {str(e)}"
         }
     except Exception as e:
-        print(f"❌ Unexpected error calling N8N webhook: {type(e).__name__}: {str(e)}")
         return {
             "support_sources": [],
             "contradict_sources": [],

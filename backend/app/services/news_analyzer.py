@@ -14,7 +14,6 @@ try:
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
-    print("Warning: transformers not installed. Using fallback analysis.")
 
 class NewsAnalyzer:
     def __init__(self):
@@ -30,15 +29,12 @@ class NewsAnalyzer:
         self.classifier = None
         if TRANSFORMERS_AVAILABLE:
             try:
-                print("Loading fake news detection model...")
                 self.classifier = pipeline(
                     "text-classification",
                     model="mrm8488/bert-tiny-finetuned-fake-news-detection",
                     device=-1  # Use CPU
                 )
-                print("Model loaded successfully!")
             except Exception as e:
-                print(f"Failed to load model: {e}. Will use fallback analysis.")
                 self.classifier = None
     
     def scrape_url(self, url: str) -> Dict[str, str]:
@@ -126,7 +122,6 @@ Summary:"""
             
         except Exception as e:
             # If Gemini fails (quota, rate limit, etc.), use fallback
-            print(f"Gemini API error: {str(e)}. Using fallback summary.")
             return self._fallback_summary(content)
     
     def _fallback_summary(self, content: str) -> str:
@@ -154,7 +149,6 @@ Summary:"""
         """
         # If classifier is not available, use fallback
         if not self.classifier:
-            print("Classifier not available. Using fallback analysis.")
             return self._fallback_sentiment_analysis(content)
         
         try:
@@ -165,12 +159,8 @@ Summary:"""
             if not analysis_content:
                 raise Exception("No content to analyze")
             
-            print(f"Analyzing content (length: {len(analysis_content)}): {analysis_content[:100]}...")
-            
             # Use local fake news detection model
             result = self.classifier(analysis_content)
-            
-            print(f"Model result: {result}")
             
             # Get label and confidence
             # This model returns LABEL_0 (REAL) or LABEL_1 (FAKE)
@@ -179,8 +169,6 @@ Summary:"""
             
             label = result[0]['label']
             confidence = result[0]['score']
-            
-            print(f"Label: {label}, Confidence: {confidence}")
             
             # Map labels to our format
             if label == "LABEL_0":  # REAL news
@@ -213,10 +201,21 @@ Summary:"""
             }
             
         except Exception as e:
-            print(f"Model error: {type(e).__name__}: {str(e)}")
-            print("Using fallback analysis...")
             # Use fallback analysis if model fails
             return self._fallback_sentiment_analysis(content)
+    
+    def is_url(self, input_string: str) -> bool:
+        """
+        Check if the input string is a URL
+        """
+        url_pattern = re.compile(
+            r'^https?://'
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'
+            r'localhost|'
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
+            r'(?::\d+)?'
+            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+        return bool(url_pattern.match(input_string))
     
     def _fallback_sentiment_analysis(self, content: str) -> Dict[str, str]:
         """
@@ -269,33 +268,48 @@ Summary:"""
             "confidence": normalized_confidence
         }
     
-    async def analyze_news(self, url: str) -> Dict:
+    async def analyze_news(self, input_data: str) -> Dict:
         """
         Complete news analysis pipeline:
-        1. Scrape URL
-        2. Generate summary with Gemini
-        3. Analyze credibility with HuggingFace
-        4. Get cross-check from n8n webhook
+        1. Detect if input is URL or text
+        2. If URL: Scrape content, generate summary
+        3. If text: Use text directly, send to n8n
+        4. Analyze credibility with HuggingFace
+        5. Get cross-check from n8n webhook
         """
         try:
-            # Step 1: Scrape content
-            scraped_data = self.scrape_url(url)
+            # Step 1: Detect if input is URL or text
+            is_url_input = self.is_url(input_data)
             
-            # Step 2: Generate summary
-            summary = self.generate_summary(scraped_data['content'])
+            if is_url_input:
+                # Step 2a: Scrape URL content
+                scraped_data = self.scrape_url(input_data)
+                title = scraped_data['title']
+                content = scraped_data['content']
+                source_url = input_data
+            else:
+                # Step 2b: Use text directly
+                content = input_data
+                title = input_data[:100] + "..." if len(input_data) > 100 else input_data
+                source_url = "custom_text"
             
-            # Step 3: Analyze credibility
-            analysis = self.analyze_sentiment(scraped_data['content'])
+            # Step 3: Generate summary
+            summary = self.generate_summary(content)
             
-            # Step 4: Get cross-check from n8n webhook
+            # Step 4: Analyze credibility
+            analysis = self.analyze_sentiment(content)
+            
+            # Step 5: Get cross-check from n8n webhook
+            # For text input, send the text directly to n8n
             cross_check_data = None
             try:
                 from app.services.n8n_service import get_cross_check
-                print(f"🔍 Requesting cross-check for title: {scraped_data['title']}")
-                cross_check_data = await get_cross_check(scraped_data['title'])
-                print(f"✅ Cross-check data received: {cross_check_data}")
+                if is_url_input:
+                    cross_check_data = await get_cross_check(title)
+                else:
+                    # Send text directly to n8n
+                    cross_check_data = await get_cross_check(input_data)
             except Exception as e:
-                print(f"❌ Failed to get cross-check data: {type(e).__name__}: {e}")
                 cross_check_data = {
                     "support_sources": [],
                     "contradict_sources": [],
@@ -304,9 +318,9 @@ Summary:"""
             
             return {
                 "success": True,
-                "url": url,
-                "title": scraped_data['title'],
-                "content": scraped_data['content'],
+                "url": source_url,
+                "title": title,
+                "content": content,
                 "summary": summary,
                 "verdict": analysis['verdict'],
                 "confidence": analysis['confidence'],

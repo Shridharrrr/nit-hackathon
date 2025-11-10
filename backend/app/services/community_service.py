@@ -107,7 +107,6 @@ class CommunityService:
             
         except Exception as e:
             # Fallback without ordering
-            print(f"Query with ordering failed: {str(e)}. Falling back to simple query.")
             try:
                 posts_ref = self.db.collection(self.posts_collection)
                 query = posts_ref.limit(limit)
@@ -140,7 +139,6 @@ class CommunityService:
                 return posts
             except Exception as e2:
                 # If all else fails, return empty list instead of raising error
-                print(f"Failed to fetch community posts: {str(e2)}. Returning empty list.")
                 return []
     
     def get_post_by_id(self, post_id: str, user_id: str = None) -> Optional[Dict]:
@@ -175,9 +173,6 @@ class CommunityService:
             return None
             
         except Exception as e:
-            print(f"Failed to fetch post: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return None
     
     def vote_post(self, post_id: str, user_id: str, vote_type: str) -> Dict:
@@ -256,9 +251,8 @@ class CommunityService:
                     # Update domain score on every vote
                     updated_domain = self.domain_service.update_domain_from_votes(post_url, vote_change)
                     domain_score = updated_domain.get('total_score')
-                    print(f"🔄 Domain score updated: {domain_score}")
                 except Exception as e:
-                    print(f"Failed to update domain score from votes: {e}")
+                    pass
             
             # Update post with new vote counts and domain score
             update_data = {
@@ -355,7 +349,6 @@ class CommunityService:
             
         except Exception as e:
             # Fallback without ordering
-            print(f"Query with ordering failed: {str(e)}. Falling back to simple query.")
             try:
                 comments_ref = self.db.collection(self.comments_collection)
                 query = comments_ref.where(filter=firestore.FieldFilter('post_id', '==', post_id))
@@ -388,7 +381,6 @@ class CommunityService:
                 return comments
             except Exception as e2:
                 # If all else fails, return empty list instead of raising error
-                print(f"Failed to fetch comments: {str(e2)}. Returning empty list.")
                 return []
     
     def vote_comment(self, comment_id: str, user_id: str, vote_type: str) -> Dict:

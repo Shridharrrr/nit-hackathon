@@ -15,7 +15,7 @@ class CrossCheckData(BaseModel):
 
 
 class NewsAnalysisRequest(BaseModel):
-    url: str
+    input: str  # Can be either URL or text
 
 
 class NewsAnalysisResponse(BaseModel):

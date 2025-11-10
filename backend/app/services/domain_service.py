@@ -18,8 +18,7 @@ class DomainService:
             if domain.startswith('www.'):
                 domain = domain[4:]
             return domain.lower()
-        except Exception as e:
-            print(f"Error extracting domain: {e}")
+        except Exception:
             return url.lower()
     
     def check_https(self, url: str) -> bool:
